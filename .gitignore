@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+TestResults/
+*.user
+*.suo
+*.cache
+*.pdb
+*.nupkg
+*.snupkg
+.env
+.env.*
+!.env.example
+!.env.prod.example
