@@ -1,0 +1,6 @@
+{
+  "GoldmoneyBackend.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "c:\\GloldmoneyBackEnd\\src\\GoldmoneyBackend.Api",
+  "GoldmoneyBackend.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "c:\\GloldmoneyBackEnd\\src\\GoldmoneyBackend.Application",
+  "GoldmoneyBackend.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "c:\\GloldmoneyBackEnd\\src\\GoldmoneyBackend.Domain",
+  "GoldmoneyBackend.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "c:\\GloldmoneyBackEnd\\src\\GoldmoneyBackend.Infrastructure"
+}

@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: goldmoney-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+      MSSQL_PID: "Developer"
+    ports:
+      - "14333:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./src
+      dockerfile: GoldmoneyBackend.Api/Dockerfile
+    container_name: goldmoney-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Server=db,1433;Database=db_a6b594_sade;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: GoldmoneyBackend
+      Jwt__Audience: GoldmoneyBackendClients
+      Jwt__ExpiresMinutes: 60
+    ports:
+      - "5288:8080"
+
+volumes:
+  sqlserver_data:

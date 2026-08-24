@@ -1,0 +1,40 @@
+services:
+  - type: pserv
+    name: goldmoney-sqlserver
+    env: docker
+    dockerfilePath: ./deploy/render/mssql.Dockerfile
+    plan: starter
+    envVars:
+      - key: ACCEPT_EULA
+        value: Y
+      - key: MSSQL_PID
+        value: Developer
+      - key: MSSQL_SA_PASSWORD
+        sync: false
+    disk:
+      name: goldmoney-sql-data
+      mountPath: /var/opt/mssql
+      sizeGB: 10
+
+  - type: web
+    name: goldmoney-api
+    env: docker
+    dockerfilePath: ./src/GoldmoneyBackend.Api/Dockerfile
+    dockerContext: ./src
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: GoldmoneyBackend
+      - key: Jwt__Audience
+        value: GoldmoneyBackendClients
+      - key: Jwt__ExpiresMinutes
+        value: "60"

@@ -1,0 +1,43 @@
+namespace GoldmoneyBackend.Application.Common.Interfaces;
+
+public sealed record CrearEmpenioContratoDto(
+    string CodigoEmpresa,
+    int CodigoGrupo,
+    string NumeroContrato,
+    string? IdCliente,
+    string Serie,
+    DateTime FechaCreacion,
+    decimal CapitalPrestado,
+    decimal Interes,
+    decimal SaldoActual,
+    decimal Mensualidad,
+    string? Observacion,
+    DateTime UltimaFechaPago,
+    decimal SaldoCapital,
+    DateTime FechaVencimiento,
+    int PlazoPago,
+    string Nombre,
+    string Apellido,
+    string? Direccion,
+    string? Telefono,
+    decimal MontoMaximo,
+    string UsuarioResponsable,
+    string CodigoPais,
+    string ProcesoKey,
+    decimal? MontoMinimoEmpenio,
+    bool? ControlaCajaPorUsuario,
+    bool? ConfirmadoPorUsuario,
+    int? TrabajoConKilates,
+    int? ControlReloj,
+    string? TipoTransaccion,
+    IReadOnlyList<CrearEmpenioDetalleDto>? Detalles);
+
+public sealed record CrearEmpenioDetalleDto(
+    string CodigoTipoPrenda,
+    string? Descripcion,
+    decimal? Peso,
+    decimal? Kilataje,
+    int? Cantidad,
+    decimal? MontoAvaluo,
+    decimal? MontoPrestamoDetalle,
+    string? Observacion);

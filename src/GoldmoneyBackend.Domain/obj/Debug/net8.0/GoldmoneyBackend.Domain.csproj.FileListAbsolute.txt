@@ -1,0 +1,11 @@
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\bin\Debug\net8.0\GoldmoneyBackend.Domain.deps.json
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\bin\Debug\net8.0\GoldmoneyBackend.Domain.dll
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\bin\Debug\net8.0\GoldmoneyBackend.Domain.pdb
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.AssemblyInfoInputs.cache
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.AssemblyInfo.cs
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.csproj.CoreCompileInputs.cache
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.dll
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\refint\GoldmoneyBackend.Domain.dll
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\GoldmoneyBackend.Domain.pdb
+C:\GloldmoneyBackEnd\src\GoldmoneyBackend.Domain\obj\Debug\net8.0\ref\GoldmoneyBackend.Domain.dll

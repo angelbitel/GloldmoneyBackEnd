@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-api",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/GoldmoneyBackend.Api/GoldmoneyBackend.Api.csproj"
+      ],
+      "group": "build",
+      "problemMatcher": ["$msCompile"]
+    }
+  ]
+}
