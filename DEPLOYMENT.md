@@ -10,7 +10,12 @@ This repository includes Docker assets to run the API and SQL Server together an
 - .env.example
 - .env.prod.example
 - render.yaml
+- render.generated.yaml (generated)
 - deploy/render/mssql.Dockerfile
+- deploy/cloud/.env.cloud.example
+- deploy/cloud/generate-cloud-config.ps1
+- deploy/azure/azure.generated.env (generated)
+- deploy/azure/deploy-containerapps.ps1
 
 ## Local Run
 
@@ -37,6 +42,17 @@ To remove DB data volume:
 ```bash
 docker compose down -v
 ```
+
+## Local API Run (without hardcoded secrets)
+
+Set the database connection string as an environment variable before running the API:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection="Server=localhost,14335;Database=db_a6b594_sade;User Id=sa;Password=<YOUR_SA_PASSWORD>;TrustServerCertificate=True;Encrypt=False;"
+dotnet run --project .\src\GoldmoneyBackend.Api\GoldmoneyBackend.Api.csproj
+```
+
+This value overrides `appsettings*.json` and avoids storing real passwords in source files.
 
 ## Production-like Run (single VM)
 
@@ -103,6 +119,41 @@ Suggested connection string format:
 ```text
 Server=<render-db-host>,1433;Database=db_a6b594_sade;User Id=sa;Password=<SA_PASSWORD>;TrustServerCertificate=True;Encrypt=False;
 ```
+
+## Unified Cloud Config (Render + Azure)
+
+Use one config file and generate both platform artifacts automatically.
+
+1. Copy the template:
+
+```powershell
+Copy-Item .\deploy\cloud\.env.cloud.example .\deploy\cloud\.env.cloud
+```
+
+2. Fill values in `.env.cloud` once.
+
+3. Generate platform files:
+
+```powershell
+.\deploy\cloud\generate-cloud-config.ps1
+```
+
+Generated outputs:
+
+- `render.generated.yaml` (for Render Blueprint)
+- `deploy/azure/azure.generated.env` (for Azure script)
+
+### Render deploy
+
+- In Render, use `render.generated.yaml` as your Blueprint.
+
+### Azure deploy
+
+```powershell
+.\deploy\azure\deploy-containerapps.ps1 -ApiImage <your-acr-or-registry-image>
+```
+
+This applies the same values for DB/JWT/connection across both clouds.
 
 ## Security Notes
 

@@ -11,6 +11,8 @@ services:
       MSSQL_PID: "Express"
     volumes:
       - sqlserver_data_prod:/var/opt/mssql
+    ports:
+      - "${SQL_HOST_PORT:-14335}:1433"
     healthcheck:
       test:
         [

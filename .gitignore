@@ -13,3 +13,8 @@ TestResults/
 .env.*
 !.env.example
 !.env.prod.example
+
+# Generated cloud deployment files with secrets
+render.generated.yaml
+deploy/azure/azure.generated.env
+deploy/cloud/.env.cloud
