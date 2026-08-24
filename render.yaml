@@ -19,7 +19,7 @@ services:
   - type: web
     name: goldmoney-api
     env: docker
-    dockerfilePath: ./src/GoldmoneyBackend.Api/Dockerfile
+    dockerfilePath: ./GoldmoneyBackend.Api/Dockerfile
     dockerContext: ./src
     plan: starter
     healthCheckPath: /health

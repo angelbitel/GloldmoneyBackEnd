@@ -59,7 +59,7 @@ services:
   - type: web
     name: $($envMap.API_SERVICE_NAME)
     env: docker
-    dockerfilePath: ./src/GoldmoneyBackend.Api/Dockerfile
+    dockerfilePath: ./GoldmoneyBackend.Api/Dockerfile
     dockerContext: ./src
     plan: $($envMap.RENDER_API_PLAN)
     healthCheckPath: /health
