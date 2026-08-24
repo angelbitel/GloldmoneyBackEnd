@@ -155,6 +155,29 @@ Generated outputs:
 
 This applies the same values for DB/JWT/connection across both clouds.
 
+## One-command Azure App Service + Azure SQL deploy
+
+If you prefer Azure App Service (API) + Azure SQL Database, use the unified script:
+
+1. Copy template:
+
+```powershell
+Copy-Item .\deploy\azure\.env.azure.example .\deploy\azure\.env.azure
+```
+
+2. Fill `.env.azure` values.
+
+3. Run deployment:
+
+```powershell
+.\deploy\azure\deploy-azure.ps1 -EnvFile .\deploy\azure\.env.azure
+```
+
+Optional migration from local SQL to Azure SQL:
+
+- Set `MIGRATE_DATA=true` in `.env.azure`
+- Ensure `SqlPackage` is installed and available in PATH
+
 ## Security Notes
 
 - Never commit real passwords or JWT secrets.
