@@ -26,7 +26,7 @@ $envMap = Get-EnvMap $EnvFile
 $required = @(
     "PROJECT_NAME", "API_SERVICE_NAME", "DB_SERVICE_NAME", "DB_NAME", "DB_USER", "SA_PASSWORD",
     "JWT_KEY", "JWT_ISSUER", "JWT_AUDIENCE", "JWT_EXPIRES_MINUTES", "API_PORT",
-    "ASPNETCORE_ENVIRONMENT", "RENDER_API_PLAN", "RENDER_DB_PLAN", "RENDER_DB_DISK_GB"
+  "ASPNETCORE_ENVIRONMENT", "RENDER_API_PLAN", "RENDER_DB_PLAN", "RENDER_DB_DISK_GB"
 )
 
 foreach ($key in $required) {
@@ -83,24 +83,5 @@ services:
 $renderPath = "c:\GloldmoneyBackEnd\render.generated.yaml"
 Set-Content -Path $renderPath -Value $renderOut -Encoding UTF8
 
-$azureEnvOut = @"
-API_SERVICE_NAME=$($envMap.API_SERVICE_NAME)
-DB_SERVICE_NAME=$($envMap.DB_SERVICE_NAME)
-AZ_RESOURCE_GROUP=$($envMap.AZ_RESOURCE_GROUP)
-AZ_CONTAINERAPPS_ENV=$($envMap.AZ_CONTAINERAPPS_ENV)
-LOCATION=$($envMap.LOCATION)
-SA_PASSWORD=$($envMap.SA_PASSWORD)
-CONNECTIONSTRING_DEFAULT=Server=$($envMap.DB_SERVICE_NAME),1433;Database=$($envMap.DB_NAME);User Id=$($envMap.DB_USER);Password=$($envMap.SA_PASSWORD);TrustServerCertificate=True;Encrypt=False;
-JWT_KEY=$($envMap.JWT_KEY)
-JWT_ISSUER=$($envMap.JWT_ISSUER)
-JWT_AUDIENCE=$($envMap.JWT_AUDIENCE)
-JWT_EXPIRES_MINUTES=$($envMap.JWT_EXPIRES_MINUTES)
-ASPNETCORE_ENVIRONMENT=$($envMap.ASPNETCORE_ENVIRONMENT)
-API_PORT=$($envMap.API_PORT)
-"@
-
-$azureEnvPath = "c:\GloldmoneyBackEnd\deploy\azure\azure.generated.env"
-Set-Content -Path $azureEnvPath -Value $azureEnvOut -Encoding UTF8
-
 Write-Output "Generated: $renderPath"
-Write-Output "Generated: $azureEnvPath"
+Write-Output "Azure artifact generation is temporarily disabled."

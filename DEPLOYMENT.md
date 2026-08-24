@@ -2,6 +2,8 @@
 
 This repository includes Docker assets to run the API and SQL Server together and keep deployment portable for Azure and Render.
 
+> Azure deployment is temporarily disabled while Render deployment is stabilized.
+
 ## Files
 
 - docker-compose.yml
@@ -14,8 +16,9 @@ This repository includes Docker assets to run the API and SQL Server together an
 - deploy/render/mssql.Dockerfile
 - deploy/cloud/.env.cloud.example
 - deploy/cloud/generate-cloud-config.ps1
-- deploy/azure/azure.generated.env (generated)
-- deploy/azure/deploy-containerapps.ps1
+- deploy/azure/azure.generated.env (generated, Azure paused)
+- deploy/azure/deploy-containerapps.ps1.disabled
+- deploy/azure/deploy-azure.ps1.disabled
 
 ## Local Run
 
@@ -75,33 +78,12 @@ Notes:
 - API is exposed on `${API_PORT}` (defaults to `8080`).
 - Restart policy is `unless-stopped` for both services.
 
-## Azure (Container Apps)
+## Azure
 
-You can deploy both services from `docker-compose.yml`.
+Azure deployment is temporarily paused.
 
-Requirements:
-
-- Azure CLI
-- Azure Container Apps extension
-
-Example flow:
-
-```bash
-az login
-az group create --name rg-goldmoney --location eastus
-az containerapp env create --name cae-goldmoney --resource-group rg-goldmoney --location eastus
-```
-
-Then deploy API and DB as separate Container Apps using the same images/settings from `docker-compose.yml`.
-Use:
-
-- API port: 8080
-- DB port: 1433 (internal only)
-- API health endpoint: `/health`
-
-Recommendation:
-
-- For production on Azure, use Azure SQL Database instead of SQL Server in a container when possible.
+- Scripts are disabled in `deploy/azure/*.disabled`.
+- Re-enable when Render deployment is confirmed stable.
 
 ## Render
 
@@ -120,9 +102,9 @@ Suggested connection string format:
 Server=<render-db-host>,1433;Database=db_a6b594_sade;User Id=sa;Password=<SA_PASSWORD>;TrustServerCertificate=True;Encrypt=False;
 ```
 
-## Unified Cloud Config (Render + Azure)
+## Unified Cloud Config (Render)
 
-Use one config file and generate both platform artifacts automatically.
+Use one config file and generate Render artifacts automatically.
 
 1. Copy the template:
 
@@ -141,42 +123,12 @@ Copy-Item .\deploy\cloud\.env.cloud.example .\deploy\cloud\.env.cloud
 Generated outputs:
 
 - `render.generated.yaml` (for Render Blueprint)
-- `deploy/azure/azure.generated.env` (for Azure script)
 
 ### Render deploy
 
 - In Render, use `render.generated.yaml` as your Blueprint.
 
-### Azure deploy
-
-```powershell
-.\deploy\azure\deploy-containerapps.ps1 -ApiImage <your-acr-or-registry-image>
-```
-
-This applies the same values for DB/JWT/connection across both clouds.
-
-## One-command Azure App Service + Azure SQL deploy
-
-If you prefer Azure App Service (API) + Azure SQL Database, use the unified script:
-
-1. Copy template:
-
-```powershell
-Copy-Item .\deploy\azure\.env.azure.example .\deploy\azure\.env.azure
-```
-
-2. Fill `.env.azure` values.
-
-3. Run deployment:
-
-```powershell
-.\deploy\azure\deploy-azure.ps1 -EnvFile .\deploy\azure\.env.azure
-```
-
-Optional migration from local SQL to Azure SQL:
-
-- Set `MIGRATE_DATA=true` in `.env.azure`
-- Ensure `SqlPackage` is installed and available in PATH
+Azure generation/deploy steps are disabled for now.
 
 ## Security Notes
 
