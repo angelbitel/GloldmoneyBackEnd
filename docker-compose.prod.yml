@@ -40,6 +40,11 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-GoldmoneyBackend}
       Jwt__Audience: ${JWT_AUDIENCE:-GoldmoneyBackendClients}
       Jwt__ExpiresMinutes: ${JWT_EXPIRES_MINUTES:-60}
+      Auth__Users__0__UserName: ${AUTH_USER_1_NAME:-}
+      Auth__Users__0__Password: ${AUTH_USER_1_PASSWORD_HASH:-}
+      Auth__Users__0__Roles__0: ${AUTH_USER_1_ROLE_1:-}
+      Auth__Users__0__Roles__1: ${AUTH_USER_1_ROLE_2:-}
+      Auth__Users__0__Roles__2: ${AUTH_USER_1_ROLE_3:-}
     ports:
       - "${API_PORT:-8080}:8080"
 

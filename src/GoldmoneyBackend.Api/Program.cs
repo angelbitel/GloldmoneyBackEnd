@@ -5,6 +5,9 @@ using GoldmoneyBackend.Infrastructure;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var configuredUrls = builder.Configuration["ASPNETCORE_URLS"];
+var hasHttpsEndpoint = !string.IsNullOrWhiteSpace(configuredUrls)
+    && configuredUrls.Contains("https://", StringComparison.OrdinalIgnoreCase);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -28,7 +31,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+if (hasHttpsEndpoint)
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));

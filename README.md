@@ -133,6 +133,8 @@ Usuarios de desarrollo configurados actualmente:
 - `manager` / `Manager123!`
 - `analyst` / `Analyst123!`
 
+Las contraseñas no se guardan en texto plano en configuración; se almacenan como hash PBKDF2-SHA256.
+
 Roles usados por autorización:
 
 - `Admin`

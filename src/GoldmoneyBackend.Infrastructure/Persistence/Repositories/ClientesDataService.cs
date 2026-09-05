@@ -15,6 +15,26 @@ public sealed class ClientesDataService : IClientesDataService
         _dbContext = dbContext;
     }
 
+    public async Task<IReadOnlyList<ClienteDbDto>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.Clientes
+            .AsNoTracking()
+            .OrderBy(x => x.IdCliente)
+            .Select(x => new ClienteDbDto(
+                x.IdCliente,
+                x.Apellido,
+                x.Nombre,
+                x.Telefono,
+                x.Estatus,
+                x.Direccion,
+                x.Comentario,
+                x.CodigoPais,
+                x.CodigoProvincia,
+                x.CodigoDistrito,
+                x.CodigoCorregimiento))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
     {
         ValidateKey(dto.IdCliente, "id_cliente");

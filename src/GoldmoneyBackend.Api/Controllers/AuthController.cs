@@ -1,6 +1,8 @@
+using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Auth;
 using GoldmoneyBackend.Application.Auth.Commands.Login;
 using GoldmoneyBackend.Application.Auth.DTOs;
+using GoldmoneyBackend.Application.Auth.Queries.GetUsuarios;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,5 +28,14 @@ public sealed class AuthController : ControllerBase
     {
         var token = await _mediator.Send(new LoginCommand(request.UserName, request.Password), cancellationToken);
         return Ok(token);
+    }
+
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpGet("usuarios")]
+    [ProducesResponseType(typeof(IReadOnlyList<UsuarioDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUsuarios(CancellationToken cancellationToken)
+    {
+        var usuarios = await _mediator.Send(new GetUsuariosQuery(), cancellationToken);
+        return Ok(usuarios);
     }
 }

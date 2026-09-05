@@ -3,6 +3,7 @@ using GoldmoneyBackend.Application.Clientes.Commands.CreateCliente;
 using GoldmoneyBackend.Application.Clientes.Commands.DeleteCliente;
 using GoldmoneyBackend.Application.Clientes.Commands.UpdateCliente;
 using GoldmoneyBackend.Application.Clientes.DTOs;
+using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Application.Clientes.Queries.GetClienteById;
 using GoldmoneyBackend.Application.Clientes.Queries.GetClientes;
 using MediatR;
@@ -17,10 +18,12 @@ namespace GoldmoneyBackend.Api.Controllers;
 public sealed class ClientesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IClientesDataService _clientesDataService;
 
-    public ClientesController(IMediator mediator)
+    public ClientesController(IMediator mediator, IClientesDataService clientesDataService)
     {
         _mediator = mediator;
+        _clientesDataService = clientesDataService;
     }
 
     [HttpPost]
@@ -43,10 +46,10 @@ public sealed class ClientesController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
-    [ProducesResponseType(typeof(IReadOnlyList<ClienteDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<ClienteDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var clientes = await _mediator.Send(new GetClientesQuery(), cancellationToken);
+        var clientes = await _clientesDataService.GetAllAsync(cancellationToken);
         return Ok(clientes);
     }
 

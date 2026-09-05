@@ -36,6 +36,18 @@ services:
       Jwt__Issuer: GoldmoneyBackend
       Jwt__Audience: GoldmoneyBackendClients
       Jwt__ExpiresMinutes: 60
+      Auth__Users__0__UserName: admin
+      Auth__Users__0__Password: pbkdf2$sha256$100000$GuMzonwIMZsAGqjTpPGeDA==$wMvgvXHEOLQ4hp/YV32xYN240WxSCR+dfVVNDUnDtfQ=
+      Auth__Users__0__Roles__0: Admin
+      Auth__Users__0__Roles__1: Manager
+      Auth__Users__0__Roles__2: Analyst
+      Auth__Users__1__UserName: manager
+      Auth__Users__1__Password: pbkdf2$sha256$100000$gLE8O244zFT0M9OFq3P6Pw==$OZZI7jztYwmpmpu60sEmLdZPDU5+u6E5WEpTuTTCpA8=
+      Auth__Users__1__Roles__0: Manager
+      Auth__Users__1__Roles__1: Analyst
+      Auth__Users__2__UserName: analyst
+      Auth__Users__2__Password: pbkdf2$sha256$100000$khcmFPxWcVqYfA+Fe6xgAw==$sZAO21xWcOdDAo1G4Vi2uWQ8atrFvZZ0aM+FL5P7ffQ=
+      Auth__Users__2__Roles__0: Analyst
     ports:
       - "5288:8080"
 
