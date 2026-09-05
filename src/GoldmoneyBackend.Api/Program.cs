@@ -5,9 +5,35 @@ using GoldmoneyBackend.Infrastructure;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+const string CorsPolicyName = "FrontendCors";
 var configuredUrls = builder.Configuration["ASPNETCORE_URLS"];
 var hasHttpsEndpoint = !string.IsNullOrWhiteSpace(configuredUrls)
     && configuredUrls.Contains("https://", StringComparison.OrdinalIgnoreCase);
+var corsAllowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
+    ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policyBuilder =>
+    {
+        if (corsAllowedOrigins.Length == 0)
+        {
+            policyBuilder
+                .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+
+            return;
+        }
+
+        policyBuilder
+            .WithOrigins(corsAllowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -36,6 +62,7 @@ if (hasHttpsEndpoint)
     app.UseHttpsRedirection();
 }
 
+app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
