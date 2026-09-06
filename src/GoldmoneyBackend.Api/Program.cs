@@ -44,15 +44,16 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
+app.MapScalarApiReference(options =>
+{
+    options.WithTitle("Goldmoney Backend API");
+    options.WithOpenApiRoutePattern("/swagger/{documentName}/swagger.json");
+});
+
+app.UseSwagger();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapScalarApiReference(options =>
-    {
-        options.WithTitle("Goldmoney Backend API");
-        options.WithOpenApiRoutePattern("/swagger/{documentName}/swagger.json");
-    });
-
-    app.UseSwagger();
     app.UseSwaggerUI();
 }
 
