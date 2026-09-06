@@ -57,7 +57,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-if (hasHttpsEndpoint)
+if (hasHttpsEndpoint && !app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
@@ -65,6 +65,7 @@ if (hasHttpsEndpoint)
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/", () => Results.Ok(new { message = "Goldmoney Backend API is running", health = "/health", login = "/api/auth/login" }));
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 

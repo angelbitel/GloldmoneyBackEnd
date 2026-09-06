@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\GoldmoneyBackend.Application\GoldmoneyBackend.Application.csproj" />
     <ProjectReference Include="..\..\src\GoldmoneyBackend.Domain\GoldmoneyBackend.Domain.csproj" />
+    <ProjectReference Include="..\..\src\GoldmoneyBackend.Infrastructure\GoldmoneyBackend.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

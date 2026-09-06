@@ -14,6 +14,8 @@ namespace GoldmoneyBackend.Infrastructure.Authentication;
 
 public sealed class AuthService : IAuthService
 {
+    private const string DefaultSigningKey = "GoldmoneyBackend-Development-Key-At-Least-32-Characters";
+
     private static readonly string[] CandidateTables =
     [
         "usuarios",
@@ -74,7 +76,16 @@ public sealed class AuthService : IAuthService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var validationInDatabase = await TryValidateAgainstUsersTableAsync(userName, password, cancellationToken);
+        bool? validationInDatabase;
+
+        try
+        {
+            validationInDatabase = await TryValidateAgainstUsersTableAsync(userName, password, cancellationToken);
+        }
+        catch (DbException)
+        {
+            validationInDatabase = null;
+        }
 
         if (validationInDatabase == false)
         {
@@ -109,12 +120,18 @@ public sealed class AuthService : IAuthService
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
+        var signingKeyValue = string.IsNullOrWhiteSpace(_jwtOptions.Key)
+            ? DefaultSigningKey
+            : _jwtOptions.Key;
+        var issuer = string.IsNullOrWhiteSpace(_jwtOptions.Issuer) ? "GoldmoneyBackend" : _jwtOptions.Issuer;
+        var audience = string.IsNullOrWhiteSpace(_jwtOptions.Audience) ? "GoldmoneyBackendClients" : _jwtOptions.Audience;
+
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyValue));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
         var tokenDescriptor = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             notBefore: nowUtc,
             expires: expiresAtUtc,
