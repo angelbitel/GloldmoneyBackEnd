@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IClienteReadRepository, ClienteReadRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IClientesDataService, ClientesDataService>();
+        services.AddScoped<IUsuariosDataService, UsuariosDataService>();
         services.AddScoped<IEmpresasDataService, EmpresasDataService>();
         services.AddScoped<IEmpeniosDataService, EmpeniosDataService>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();
