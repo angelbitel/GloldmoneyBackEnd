@@ -29,7 +29,7 @@ services:
       - key: ASPNETCORE_URLS
         value: http://+:8080
       - key: ConnectionStrings__DefaultConnection
-        value: Server=goldmoney-sqlserver,1433;Database=db_a6b594_sade;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;
+        value: Server=${SQL_SERVER_HOST},1433;Database=db_a6b594_sade;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;
       - key: Jwt__Key
         sync: false
       - key: Jwt__Issuer
