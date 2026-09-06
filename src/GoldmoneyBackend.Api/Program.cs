@@ -14,22 +14,30 @@ var corsAllowedOrigins = builder.Configuration
     .Get<string[]>()
     ?? [];
 
+var isAllowedOrigin = (string? origin) =>
+{
+    if (string.IsNullOrWhiteSpace(origin))
+    {
+        return false;
+    }
+
+    if (corsAllowedOrigins.Any(configuredOrigin =>
+            string.Equals(configuredOrigin, origin, StringComparison.OrdinalIgnoreCase)))
+    {
+        return true;
+    }
+
+    return origin.Contains(".vercel.app", StringComparison.OrdinalIgnoreCase)
+        || origin.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+        || origin.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+};
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policyBuilder =>
     {
-        if (corsAllowedOrigins.Length == 0)
-        {
-            policyBuilder
-                .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-
-            return;
-        }
-
         policyBuilder
-            .WithOrigins(corsAllowedOrigins)
+            .SetIsOriginAllowed(isAllowedOrigin)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
