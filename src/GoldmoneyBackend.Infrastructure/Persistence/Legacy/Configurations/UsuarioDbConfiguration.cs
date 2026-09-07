@@ -31,7 +31,9 @@ public sealed class UsuarioDbConfiguration : IEntityTypeConfiguration<UsuarioDb>
             .HasMaxLength(25)
             .IsRequired();
 
-        builder.Property(x => x.StatusCuenta).HasColumnName("status_cuenta");
+        builder.Property(x => x.StatusCuenta)
+            .HasColumnName("status_cuenta")
+            .HasColumnType("decimal(18,2)");
         builder.Property(x => x.IniciarDia).HasColumnName("iniciar_dia");
         builder.Property(x => x.AplicarDescuento).HasColumnName("aplicar_descuento");
         builder.Property(x => x.UsuarioAdmin).HasColumnName("usuario_admin");
