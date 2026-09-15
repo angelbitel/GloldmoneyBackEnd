@@ -55,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<IClientesDataService, ClientesDataService>();
         services.AddScoped<IUsuariosDataService, UsuariosDataService>();
         services.AddScoped<IEmpresasDataService, EmpresasDataService>();
+        services.AddScoped<IGruposDataService, GruposDataService>();
+        services.AddScoped<ICategoriasPrendaDataService, CategoriasPrendaDataService>();
         services.AddScoped<IEmpeniosDataService, EmpeniosDataService>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();
         services.AddScoped<IAuthService, AuthService>();

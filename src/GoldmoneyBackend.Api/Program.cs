@@ -27,9 +27,23 @@ var isAllowedOrigin = (string? origin) =>
         return true;
     }
 
-    return origin.Contains(".vercel.app", StringComparison.OrdinalIgnoreCase)
-        || origin.Contains("localhost", StringComparison.OrdinalIgnoreCase)
-        || origin.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+    try
+    {
+        var originUri = new Uri(origin);
+        var host = originUri.Host;
+
+        return host.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+            || host.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || host.Contains("0.0.0.0", StringComparison.OrdinalIgnoreCase)
+            || host.Contains(".localhost", StringComparison.OrdinalIgnoreCase)
+            || host.Contains(".vercel.app", StringComparison.OrdinalIgnoreCase)
+            || host.Contains(".ngrok.io", StringComparison.OrdinalIgnoreCase)
+            || host.Contains(".localtest.me", StringComparison.OrdinalIgnoreCase);
+    }
+    catch
+    {
+        return false;
+    }
 };
 
 builder.Services.AddCors(options =>

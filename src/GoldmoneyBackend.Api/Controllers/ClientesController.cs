@@ -47,9 +47,9 @@ public sealed class ClientesController : ControllerBase
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
     [ProducesResponseType(typeof(IReadOnlyList<ClienteDbDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromQuery] string? search, CancellationToken cancellationToken)
     {
-        var clientes = await _clientesDataService.GetAllAsync(cancellationToken);
+        var clientes = await _clientesDataService.GetAllAsync(search, cancellationToken);
         return Ok(clientes);
     }
 

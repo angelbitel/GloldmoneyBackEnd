@@ -15,10 +15,23 @@ public sealed class ClientesDataService : IClientesDataService
         _dbContext = dbContext;
     }
 
-    public async Task<IReadOnlyList<ClienteDbDto>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ClienteDbDto>> GetAllAsync(string? search, CancellationToken cancellationToken)
     {
-        return await _dbContext.Clientes
-            .AsNoTracking()
+        var query = _dbContext.Clientes.AsNoTracking();
+
+        if (TryNormalizePanamaId(search, out var normalizedIdCliente))
+        {
+            query = query.Where(x => x.IdCliente == normalizedIdCliente);
+        }
+        else if (!string.IsNullOrWhiteSpace(search))
+        {
+            var textSearch = search.Trim();
+            query = query.Where(x =>
+                (x.Nombre != null && x.Nombre.Contains(textSearch))
+                || (x.Apellido != null && x.Apellido.Contains(textSearch)));
+        }
+
+        return await query
             .OrderBy(x => x.IdCliente)
             .Select(x => new ClienteDbDto(
                 x.IdCliente,
@@ -33,6 +46,48 @@ public sealed class ClientesDataService : IClientesDataService
                 x.CodigoDistrito,
                 x.CodigoCorregimiento))
             .ToListAsync(cancellationToken);
+    }
+
+    private static bool TryNormalizePanamaId(string? value, out string normalizedIdCliente)
+    {
+        normalizedIdCliente = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var parts = value.Trim().Split('-', StringSplitOptions.TrimEntries);
+        if (parts.Length == 3 && parts.All(part => part.Length > 0 && part.All(char.IsDigit)))
+        {
+            if (parts[0].Length <= 3 && parts[1].Length <= 4 && parts[2].Length <= 5)
+            {
+                normalizedIdCliente = string.Join('-',
+                    parts[0].PadLeft(3, '0'),
+                    parts[1].PadLeft(4, '0'),
+                    parts[2].PadLeft(5, '0'));
+                return true;
+            }
+
+            return false;
+        }
+
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        if (digits.Length == 7)
+        {
+            normalizedIdCliente = $"{digits[..1].PadLeft(3, '0')}-"
+                + $"{digits[1..3].PadLeft(4, '0')}-"
+                + $"{digits[3..].PadLeft(5, '0')}";
+            return true;
+        }
+
+        if (digits.Length == 12)
+        {
+            normalizedIdCliente = $"{digits[..3]}-{digits[3..7]}-{digits[7..]}";
+            return true;
+        }
+
+        return false;
     }
 
     public async Task CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
