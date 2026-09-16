@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IUsuariosDataService, UsuariosDataService>();
         services.AddScoped<IEmpresasDataService, EmpresasDataService>();
         services.AddScoped<IGruposDataService, GruposDataService>();
+        services.AddScoped<IValorDelOroDataService, ValorDelOroDataService>();
         services.AddScoped<ICategoriasPrendaDataService, CategoriasPrendaDataService>();
         services.AddScoped<IEmpeniosDataService, EmpeniosDataService>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();

@@ -16,6 +16,7 @@ public sealed class LegacyDataDbContext : DbContext
     public DbSet<UsuarioDb> Usuarios => Set<UsuarioDb>();
     public DbSet<GrupoDb> Grupos => Set<GrupoDb>();
     public DbSet<CategoriaPrendaDb> CategoriasPrenda => Set<CategoriaPrendaDb>();
+    public DbSet<ValorDelOroDb> ValoresDelOro => Set<ValorDelOroDb>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
