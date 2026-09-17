@@ -57,7 +57,12 @@ public static class DependencyInjection
         services.AddScoped<IEmpresasDataService, EmpresasDataService>();
         services.AddScoped<IGruposDataService, GruposDataService>();
         services.AddScoped<IValorDelOroDataService, ValorDelOroDataService>();
+        services.AddScoped<IParametrosEmpresaDataService, ParametrosEmpresaDataService>();
         services.AddScoped<ISesionesDataService, SesionesDataService>();
+        services.AddScoped<IPaisesDataService, PaisesDataService>();
+        services.AddScoped<IProvinciasDataService, ProvinciasDataService>();
+        services.AddScoped<IDistritosDataService, DistritosDataService>();
+        services.AddScoped<ICorregimientosDataService, CorregimientosDataService>();
         services.AddScoped<ICategoriasPrendaDataService, CategoriasPrendaDataService>();
         services.AddScoped<IEmpeniosDataService, EmpeniosDataService>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();

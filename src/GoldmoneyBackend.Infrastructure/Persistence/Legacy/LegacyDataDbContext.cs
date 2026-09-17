@@ -19,6 +19,10 @@ public sealed class LegacyDataDbContext : DbContext
     public DbSet<ValorDelOroDb> ValoresDelOro => Set<ValorDelOroDb>();
     public DbSet<IniciarCierreSesionDb> SesionesEmpresa => Set<IniciarCierreSesionDb>();
     public DbSet<ParametrosEmpresaDb> ParametrosEmpresa => Set<ParametrosEmpresaDb>();
+    public DbSet<PaisDb> Paises => Set<PaisDb>();
+    public DbSet<ProvinciaDb> Provincias => Set<ProvinciaDb>();
+    public DbSet<DistritoDb> Distritos => Set<DistritoDb>();
+    public DbSet<CorregimientoDb> Corregimientos => Set<CorregimientoDb>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

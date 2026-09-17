@@ -8,9 +8,9 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
 public sealed class SesionesDataService : ISesionesDataService
 {
-    // Valores de PARAMETROS_EMPRESA.cont_monto_caja replicados del enum ManejoCaja del VB6 legacy.
-    private const decimal ManejoCajaDiaAnterior = 0m;
-    private const decimal ManejoCajaInicioDia = 1m;
+    // PARAMETROS_EMPRESA.cont_monto_caja: 1 = usar valor del dia anterior, 0 = usar monto inicial.
+    private const decimal ManejoCajaInicioDia = 0m;
+    private const decimal ManejoCajaDiaAnterior = 1m;
 
     private readonly LegacyDataDbContext _dbContext;
 
