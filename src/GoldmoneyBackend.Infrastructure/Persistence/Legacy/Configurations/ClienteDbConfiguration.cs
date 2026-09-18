@@ -27,5 +27,25 @@ public sealed class ClienteDbConfiguration : IEntityTypeConfiguration<ClienteDb>
         builder.Property(x => x.CodigoProvincia).HasColumnName("codigo_provincia").HasMaxLength(5);
         builder.Property(x => x.CodigoDistrito).HasColumnName("codigo_distrito").HasMaxLength(5);
         builder.Property(x => x.CodigoCorregimiento).HasColumnName("codigo_corregimiento").HasMaxLength(5);
+
+        builder.HasOne<PaisDb>()
+            .WithMany()
+            .HasForeignKey(x => x.CodigoPais)
+            .HasConstraintName("FK_CLIENTES_PAISES");
+
+        builder.HasOne<ProvinciaDb>()
+            .WithMany()
+            .HasForeignKey(x => x.CodigoProvincia)
+            .HasConstraintName("FK_CLIENTES_PROVINCIA");
+
+        builder.HasOne<DistritoDb>()
+            .WithMany()
+            .HasForeignKey(x => x.CodigoDistrito)
+            .HasConstraintName("FK_CLIENTES_DISTRITO");
+
+        builder.HasOne<CorregimientoDb>()
+            .WithMany()
+            .HasForeignKey(x => x.CodigoCorregimiento)
+            .HasConstraintName("FK_CLIENTES_CORREGIMIENTO");
     }
 }

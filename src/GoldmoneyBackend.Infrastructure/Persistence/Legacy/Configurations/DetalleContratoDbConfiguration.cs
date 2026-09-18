@@ -26,5 +26,15 @@ public sealed class DetalleContratoDbConfiguration : IEntityTypeConfiguration<De
         builder.Property(x => x.CodigoReloj).HasColumnName("codigo_reloj");
         builder.Property(x => x.CantidadProducto).HasColumnName("cantidad_producto");
         builder.Property(x => x.CodigoCategoriaPrenda).HasColumnName("codigo_categoria_prenda");
+
+        builder.HasOne<ContratoDb>()
+            .WithMany()
+            .HasForeignKey(x => new { x.CodigoEmpresa, x.CodigoGrupo, x.NumeroContrato })
+            .HasConstraintName("FK_DETALLES_CONTRATOS_CONTRATOS");
+
+        builder.HasOne<CategoriaPrendaDb>()
+            .WithMany()
+            .HasForeignKey(x => x.CodigoCategoriaPrenda)
+            .HasConstraintName("FK_DETALLES_CONTRATOS_CATEGORIAS_PRENDA");
     }
 }

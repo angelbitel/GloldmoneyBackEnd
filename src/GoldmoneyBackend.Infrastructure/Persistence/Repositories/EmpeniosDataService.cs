@@ -103,7 +103,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new DomainValidationException($"No se pudo crear el contrato mediante sp_creacion_contratos. Detalle: {ex.Message}");
+            throw new DomainValidationException($"No se pudo crear el contrato en tabla CONTRATOS. Detalle: {ex.Message}");
         }
     }
 
@@ -190,66 +190,77 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         IDbContextTransaction transaction,
         CancellationToken cancellationToken)
     {
-        var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction.GetDbTransaction();
-        command.CommandText = @"
-            EXEC sp_creacion_contratos
-                @codigo_empresa,
-                @codigo_grupo,
-                @numero_contrato,
-                @id_cliente,
-                @serie,
-                @fecha_creacion,
-                @capital_prestado,
-                @interes,
-                @saldo_actual,
-                @mensualidad,
-                @observacion,
-                @ultima_fecha_pago,
-                @saldo_capital,
-                @fecha_vencimiento,
-                @plazo_pago,
-                @nombre,
-                @apellido,
-                @direccion,
-                @telefono,
-                @monto_maximo,
-                @usuario_responsable,
-                @codigo_pais";
-
-        AddParameter(command, "@codigo_empresa", dto.CodigoEmpresa.Trim());
-        AddParameter(command, "@codigo_grupo", dto.CodigoGrupo);
-        AddParameter(command, "@numero_contrato", dto.NumeroContrato.Trim());
-        AddParameter(command, "@id_cliente", TrimOrDbNull(dto.IdCliente));
-        AddParameter(command, "@serie", dto.Serie.Trim());
-        AddParameter(command, "@fecha_creacion", dto.FechaCreacion);
-        AddParameter(command, "@capital_prestado", dto.CapitalPrestado);
-        AddParameter(command, "@interes", dto.Interes);
-        AddParameter(command, "@saldo_actual", dto.SaldoActual);
-        AddParameter(command, "@mensualidad", dto.Mensualidad);
-        AddParameter(command, "@observacion", TrimOrDbNull(dto.Observacion));
-        AddParameter(command, "@ultima_fecha_pago", dto.UltimaFechaPago);
-        AddParameter(command, "@saldo_capital", dto.SaldoCapital);
-        AddParameter(command, "@fecha_vencimiento", dto.FechaVencimiento);
-        AddParameter(command, "@plazo_pago", dto.PlazoPago);
-        AddParameter(command, "@nombre", ToProperCase(dto.Nombre));
-        AddParameter(command, "@apellido", ToProperCase(dto.Apellido));
-        AddParameter(command, "@direccion", TrimOrDbNull(dto.Direccion));
-        AddParameter(command, "@telefono", TrimOrDbNull(dto.Telefono));
-        AddParameter(command, "@monto_maximo", dto.MontoMaximo);
-        AddParameter(command, "@usuario_responsable", dto.UsuarioResponsable.Trim());
-        AddParameter(command, "@codigo_pais", dto.CodigoPais.Trim());
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        if (result is null || result == DBNull.Value)
+        try
         {
-            return null;
-        }
+            var codigoEmpresa = dto.CodigoEmpresa.Trim();
+            var numeroContrato = dto.NumeroContrato.Trim();
 
-        return Convert.ToInt32(result);
+            var existe = await _dbContext.Contratos
+                .AsNoTracking()
+                .AnyAsync(x => x.CodigoEmpresa == codigoEmpresa
+                    && x.CodigoGrupo == dto.CodigoGrupo
+                    && x.NumeroContrato == numeroContrato, cancellationToken);
+
+            if (existe)
+            {
+                return 1;
+            }
+
+            var cliente = await _dbContext.Clientes
+                .FirstOrDefaultAsync(x => x.IdCliente == dto.IdCliente, cancellationToken);
+
+            if (cliente is null)
+            {
+                _dbContext.Clientes.Add(new ClienteDb
+                {
+                    IdCliente = dto.IdCliente,
+                    Apellido = dto.Apellido,
+                    Nombre = dto.Nombre,
+                    Telefono = dto.Telefono,
+                    Estatus = 1,
+                    Direccion = dto.Direccion,
+                    Comentario = null,
+                    CodigoPais = dto.CodigoPais
+                });
+            }
+            else
+            {
+                cliente.Apellido = dto.Apellido;
+                cliente.Nombre = dto.Nombre;
+                cliente.Telefono = dto.Telefono;
+                cliente.Direccion = dto.Direccion;
+                cliente.CodigoPais = dto.CodigoPais;
+            }
+
+            _dbContext.Contratos.Add(new ContratoDb
+            {
+                CodigoEmpresa = codigoEmpresa,
+                CodigoGrupo = dto.CodigoGrupo,
+                NumeroContrato = numeroContrato,
+                IdCliente = dto.IdCliente,
+                Serie = dto.Serie.Trim(),
+                FechaCreacion = dto.FechaCreacion,
+                CapitalPrestado = dto.CapitalPrestado,
+                Interes = dto.Interes,
+                SaldoActual = dto.SaldoActual,
+                InteresMensual = dto.Mensualidad,
+                Observacion = string.IsNullOrWhiteSpace(dto.Observacion) ? null : dto.Observacion.Trim(),
+                UltimaFechaPago = dto.UltimaFechaPago,
+                SaldoCapital = dto.SaldoCapital,
+                FechaVencimiento = dto.FechaVencimiento,
+                PlazoPago = dto.PlazoPago,
+                UsuarioResponsable = dto.UsuarioResponsable.Trim(),
+                HoraTransaccion = DateTime.UtcNow,
+                MontoMaximo = dto.MontoMaximo
+            });
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return 0;
+        }
+        catch (DbUpdateException)
+        {
+            return 1;
+        }
     }
 
     private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
