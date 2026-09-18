@@ -4,6 +4,7 @@ using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
@@ -14,10 +15,12 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
     private const string ProcesoEmpeniosNuevos = "EmpeniosNuevos";
 
     private readonly LegacyDataDbContext _dbContext;
+    private readonly ILogger<EmpeniosDataService> _logger;
 
-    public EmpeniosDataService(LegacyDataDbContext dbContext)
+    public EmpeniosDataService(LegacyDataDbContext dbContext, ILogger<EmpeniosDataService> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<string> CrearContratoAsync(CrearEmpenioContratoDto dto, CancellationToken cancellationToken)
@@ -102,6 +105,8 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error al crear contrato: {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
+                dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
             await transaction.RollbackAsync(cancellationToken);
             throw new DomainValidationException($"No se pudo crear el contrato en tabla CONTRATOS. Detalle: {ex.Message}");
         }
