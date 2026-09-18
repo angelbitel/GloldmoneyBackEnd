@@ -4,7 +4,7 @@ public sealed record CrearEmpenioContratoDto(
     string CodigoEmpresa,
     int CodigoGrupo,
     string NumeroContrato,
-    string? IdCliente,
+    string IdCliente,
     string Serie,
     DateTime FechaCreacion,
     decimal CapitalPrestado,
