@@ -262,8 +262,10 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
             await _dbContext.SaveChangesAsync(cancellationToken);
             return 0;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
+            _logger.LogError(ex, "DbUpdateException al crear contrato {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
+                dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
             return 1;
         }
     }
@@ -332,6 +334,8 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
             }
             catch (DbUpdateException ex)
             {
+                _logger.LogError(ex, "DbUpdateException al guardar detalle del contrato {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
+                    dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
                 throw new DomainValidationException($"No se pudo guardar el detalle del contrato en tabla DETALLES_CONTRATOS. Detalle: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
