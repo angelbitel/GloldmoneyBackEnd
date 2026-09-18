@@ -23,6 +23,7 @@ public sealed class LegacyDataDbContext : DbContext
     public DbSet<ProvinciaDb> Provincias => Set<ProvinciaDb>();
     public DbSet<DistritoDb> Distritos => Set<DistritoDb>();
     public DbSet<CorregimientoDb> Corregimientos => Set<CorregimientoDb>();
+    public DbSet<DetalleContratoDb> DetallesContratos => Set<DetalleContratoDb>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

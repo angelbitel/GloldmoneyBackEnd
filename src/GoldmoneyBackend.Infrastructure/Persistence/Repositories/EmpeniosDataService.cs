@@ -1,6 +1,7 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Domain.Common;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
+using GoldmoneyBackend.Infrastructure.Persistence.Legacy.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -277,40 +278,46 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
                 throw new DomainValidationException("Estimado usuario, cada detalle debe contener un codigo de tipo de prenda.");
             }
 
-            var connection = _dbContext.Database.GetDbConnection();
-            await connection.OpenAsync(cancellationToken);
+            var codigoCategoriaPrenda = await _dbContext.CategoriasPrenda
+                .AsNoTracking()
+                .Where(x => x.NombreCategoriaPrenda != null && x.NombreCategoriaPrenda == detalle.CodigoTipoPrenda.Trim())
+                .Select(x => (int?)x.CodigoCategoriaPrenda)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            await using var command = connection.CreateCommand();
-            command.Transaction = transaction.GetDbTransaction();
-            command.CommandText = @"
-                EXEC sp_salvar_detalle_contrato
-                    @codigo_barra,
-                    @codigo_grupo,
-                    @trabajo_kilates,
-                    @control_reloj,
-                    @codigo_tipo_prenda,
-                    @descripcion,
-                    @peso,
-                    @kilataje,
-                    @cantidad,
-                    @monto_avaluo,
-                    @monto_prestamo_detalle,
-                    @observacion";
+            if (!codigoCategoriaPrenda.HasValue)
+            {
+                throw new DomainValidationException($"Estimado usuario, el tipo de prenda '{detalle.CodigoTipoPrenda}' no existe en el sistema.");
+            }
 
-            AddParameter(command, "@codigo_barra", codigoBarra);
-            AddParameter(command, "@codigo_grupo", dto.CodigoGrupo);
-            AddParameter(command, "@trabajo_kilates", dto.TrabajoConKilates ?? 0);
-            AddParameter(command, "@control_reloj", dto.ControlReloj ?? 0);
-            AddParameter(command, "@codigo_tipo_prenda", detalle.CodigoTipoPrenda.Trim());
-            AddParameter(command, "@descripcion", TrimOrDbNull(detalle.Descripcion));
-            AddParameter(command, "@peso", detalle.Peso ?? 0m);
-            AddParameter(command, "@kilataje", detalle.Kilataje ?? 0m);
-            AddParameter(command, "@cantidad", detalle.Cantidad ?? 1);
-            AddParameter(command, "@monto_avaluo", detalle.MontoAvaluo ?? 0m);
-            AddParameter(command, "@monto_prestamo_detalle", detalle.MontoPrestamoDetalle ?? 0m);
-            AddParameter(command, "@observacion", TrimOrDbNull(detalle.Observacion));
+            var ultimaSecuencia = await _dbContext.DetallesContratos
+                .AsNoTracking()
+                .Where(x => x.CodigoEmpresa == dto.CodigoEmpresa.Trim()
+                    && x.CodigoGrupo == dto.CodigoGrupo
+                    && x.NumeroContrato == dto.NumeroContrato.Trim())
+                .MaxAsync(x => (int?)x.SecuenciaContratos) ?? 0;
 
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            _dbContext.DetallesContratos.Add(new DetalleContratoDb
+            {
+                CodigoEmpresa = dto.CodigoEmpresa.Trim(),
+                CodigoGrupo = dto.CodigoGrupo,
+                NumeroContrato = dto.NumeroContrato.Trim(),
+                SecuenciaContratos = ultimaSecuencia + 1,
+                Descripcion = string.IsNullOrWhiteSpace(detalle.Descripcion) ? null : detalle.Descripcion.Trim(),
+                Kilates = detalle.Kilataje,
+                Peso = detalle.Peso,
+                CodigoReloj = dto.ControlReloj,
+                CantidadProducto = detalle.Cantidad ?? 1,
+                CodigoCategoriaPrenda = codigoCategoriaPrenda.Value
+            });
+
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new DomainValidationException($"No se pudo guardar el detalle del contrato en tabla DETALLES_CONTRATOS. Detalle: {ex.InnerException?.Message ?? ex.Message}");
+            }
         }
     }
 
