@@ -331,9 +331,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         string codigoBarra,
         CancellationToken cancellationToken)
     {
-        var tipoTransaccion = string.IsNullOrWhiteSpace(dto.TipoTransaccion)
-            ? (EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN")
-            : dto.TipoTransaccion.Trim();
+        var codigoTransaccion = EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN";
 
         var codigoEmpresa = dto.CodigoEmpresa.Trim();
 
@@ -348,7 +346,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         {
             CodigoEmpresa = codigoEmpresa,
             NumeroMovimiento = ultimoMovimiento + 1,
-            CodigoTransaccion = tipoTransaccion,
+            CodigoTransaccion = codigoTransaccion,
             CodigoGrupo = dto.CodigoGrupo,
             NumeroContrato = dto.NumeroContrato.Trim(),
             MontoTransaccion = dto.CapitalPrestado,
