@@ -368,7 +368,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         AddParameter(command, "@codigo_barra", codigoBarra);
         AddParameter(command, "@monto", dto.CapitalPrestado);
         AddParameter(command, "@tipo_transaccion", tipoTransaccion);
-        AddParameter(command, "@fecha_movimiento", dto.FechaCreacion.Date);
+        AddParameter(command, "@fecha_movimiento", Convert.ToDecimal(dto.FechaCreacion.Date.ToString("yyyyMMdd")));
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
