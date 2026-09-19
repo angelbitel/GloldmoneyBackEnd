@@ -35,7 +35,7 @@ public sealed record CreateContratoCommand(
     IReadOnlyList<CreateContratoDetalleCommand>? Detalles) : IRequest<CreateContratoResultDto>;
 
 public sealed record CreateContratoDetalleCommand(
-    string CodigoTipoPrenda,
+    int CodigoTipoPrenda,
     string? Descripcion,
     decimal? Peso,
     decimal? Kilataje,

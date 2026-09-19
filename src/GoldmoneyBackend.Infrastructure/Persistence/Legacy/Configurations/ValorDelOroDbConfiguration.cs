@@ -23,7 +23,7 @@ public sealed class ValorDelOroDbConfiguration : IEntityTypeConfiguration<ValorD
             .IsRequired();
         builder.Property(x => x.Kilataje)
             .HasColumnName("kilataje")
-            .HasColumnType("decimal(2,0)")
+            .HasPrecision(2, 0)
             .IsRequired();
         builder.Property(x => x.MaximoValor)
             .HasColumnName("maximo_valor")

@@ -33,7 +33,7 @@ public sealed record CrearEmpenioContratoDto(
     IReadOnlyList<CrearEmpenioDetalleDto>? Detalles);
 
 public sealed record CrearEmpenioDetalleDto(
-    string CodigoTipoPrenda,
+    int CodigoTipoPrenda,
     string? Descripcion,
     decimal? Peso,
     decimal? Kilataje,

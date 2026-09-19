@@ -33,7 +33,7 @@ public sealed record CreateEmpenioContratoRequest(
     IReadOnlyList<CreateEmpenioDetalleRequest>? Detalles);
 
 public sealed record CreateEmpenioDetalleRequest(
-    string CodigoTipoPrenda,
+    int CodigoTipoPrenda,
     string? Descripcion,
     decimal? Peso,
     decimal? Kilataje,

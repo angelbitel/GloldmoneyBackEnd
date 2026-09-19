@@ -291,20 +291,19 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
     {
         foreach (var detalle in dto.Detalles!)
         {
-            if (string.IsNullOrWhiteSpace(detalle.CodigoTipoPrenda))
+            if (detalle.CodigoTipoPrenda <= 0)
             {
-                throw new DomainValidationException("Estimado usuario, cada detalle debe contener un codigo de tipo de prenda.");
+                throw new DomainValidationException("Estimado usuario, cada detalle debe contener un codigo de tipo de prenda valido.");
             }
 
             var codigoCategoriaPrenda = await _dbContext.CategoriasPrenda
                 .AsNoTracking()
-                .Where(x => x.NombreCategoriaPrenda != null && x.NombreCategoriaPrenda == detalle.CodigoTipoPrenda.Trim())
                 .Select(x => (int?)x.CodigoCategoriaPrenda)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(x => x == detalle.CodigoTipoPrenda, cancellationToken);
 
             if (!codigoCategoriaPrenda.HasValue)
             {
-                throw new DomainValidationException($"Estimado usuario, el tipo de prenda '{detalle.CodigoTipoPrenda}' no existe en el sistema.");
+                throw new DomainValidationException($"Estimado usuario, el tipo de prenda con codigo {detalle.CodigoTipoPrenda} no existe en el sistema.");
             }
 
             var ultimaSecuencia = await _dbContext.DetallesContratos
