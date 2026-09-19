@@ -267,7 +267,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         {
             _logger.LogError(ex, "DbUpdateException al crear contrato {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
                 dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
-            return 1;
+            throw new DomainValidationException($"No se pudo crear el contrato en tabla CONTRATOS. Detalle: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
