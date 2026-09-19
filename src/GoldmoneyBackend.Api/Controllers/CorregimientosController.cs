@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class CorregimientosController : ControllerBase
 {
-    private readonly ICorregimientosDataService _corregimientosDataService;
+    private readonly ICorregimientosRepository _corregimientosRepository;
 
-    public CorregimientosController(ICorregimientosDataService corregimientosDataService)
+    public CorregimientosController(ICorregimientosRepository corregimientosRepository)
     {
-        _corregimientosDataService = corregimientosDataService;
+        _corregimientosRepository = corregimientosRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<CorregimientoDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _corregimientosDataService.GetAllAsync(cancellationToken));
+        return Ok(await _corregimientosRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoCorregimiento}")]
@@ -30,7 +30,7 @@ public sealed class CorregimientosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoCorregimiento, CancellationToken cancellationToken)
     {
-        var corregimiento = await _corregimientosDataService.GetByKeyAsync(codigoCorregimiento, cancellationToken);
+        var corregimiento = await _corregimientosRepository.GetByKeyAsync(codigoCorregimiento, cancellationToken);
         return corregimiento is null ? NotFound() : Ok(corregimiento);
     }
 
@@ -40,8 +40,8 @@ public sealed class CorregimientosController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCorregimientoRequest request, CancellationToken cancellationToken)
     {
         var dto = new CorregimientoDbUpsertDto(request.CodigoCorregimiento, request.CodigoDistrito, request.NombreCorregimiento, request.Activo);
-        await _corregimientosDataService.CreateAsync(dto, cancellationToken);
-        var created = await _corregimientosDataService.GetByKeyAsync(request.CodigoCorregimiento, cancellationToken);
+        await _corregimientosRepository.CreateAsync(dto, cancellationToken);
+        var created = await _corregimientosRepository.GetByKeyAsync(request.CodigoCorregimiento, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoCorregimiento = request.CodigoCorregimiento }, created);
     }
 
@@ -51,8 +51,8 @@ public sealed class CorregimientosController : ControllerBase
     public async Task<IActionResult> Update(string codigoCorregimiento, [FromBody] UpdateCorregimientoRequest request, CancellationToken cancellationToken)
     {
         var dto = new CorregimientoDbUpsertDto(codigoCorregimiento, request.CodigoDistrito, request.NombreCorregimiento, request.Activo);
-        await _corregimientosDataService.UpdateAsync(codigoCorregimiento, dto, cancellationToken);
-        var updated = await _corregimientosDataService.GetByKeyAsync(codigoCorregimiento, cancellationToken);
+        await _corregimientosRepository.UpdateAsync(codigoCorregimiento, dto, cancellationToken);
+        var updated = await _corregimientosRepository.GetByKeyAsync(codigoCorregimiento, cancellationToken);
         return Ok(updated);
     }
 
@@ -61,7 +61,7 @@ public sealed class CorregimientosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoCorregimiento, CancellationToken cancellationToken)
     {
-        await _corregimientosDataService.DeleteAsync(codigoCorregimiento, cancellationToken);
+        await _corregimientosRepository.DeleteAsync(codigoCorregimiento, cancellationToken);
         return NoContent();
     }
 }

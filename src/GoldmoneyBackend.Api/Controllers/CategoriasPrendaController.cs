@@ -10,18 +10,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class CategoriasPrendaController : ControllerBase
 {
-    private readonly ICategoriasPrendaDataService _categoriasPrendaDataService;
+    private readonly ICategoriasPrendaRepository _categoriasPrendaRepository;
 
-    public CategoriasPrendaController(ICategoriasPrendaDataService categoriasPrendaDataService)
+    public CategoriasPrendaController(ICategoriasPrendaRepository categoriasPrendaRepository)
     {
-        _categoriasPrendaDataService = categoriasPrendaDataService;
+        _categoriasPrendaRepository = categoriasPrendaRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<CategoriaPrendaDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _categoriasPrendaDataService.GetAllAsync(cancellationToken));
+        return Ok(await _categoriasPrendaRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoCategoriaPrenda:int}")]
@@ -29,7 +29,7 @@ public sealed class CategoriasPrendaController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int codigoCategoriaPrenda, CancellationToken cancellationToken)
     {
-        var categoria = await _categoriasPrendaDataService.GetByIdAsync(codigoCategoriaPrenda, cancellationToken);
+        var categoria = await _categoriasPrendaRepository.GetByIdAsync(codigoCategoriaPrenda, cancellationToken);
         return categoria is null ? NotFound() : Ok(categoria);
     }
 }

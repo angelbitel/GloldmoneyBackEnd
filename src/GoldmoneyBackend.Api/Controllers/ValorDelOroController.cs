@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class ValorDelOroController : ControllerBase
 {
-    private readonly IValorDelOroDataService _valorDelOroDataService;
+    private readonly IValorDelOroRepository _valorDelOroRepository;
 
-    public ValorDelOroController(IValorDelOroDataService valorDelOroDataService)
+    public ValorDelOroController(IValorDelOroRepository valorDelOroRepository)
     {
-        _valorDelOroDataService = valorDelOroDataService;
+        _valorDelOroRepository = valorDelOroRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ValorDelOroDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _valorDelOroDataService.GetAllAsync(cancellationToken));
+        return Ok(await _valorDelOroRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoEmpresa}/{statusCalidad}/{kilataje:decimal}")]
@@ -34,7 +34,7 @@ public sealed class ValorDelOroController : ControllerBase
         decimal kilataje,
         CancellationToken cancellationToken)
     {
-        var valor = await _valorDelOroDataService.GetByKeyAsync(
+        var valor = await _valorDelOroRepository.GetByKeyAsync(
             codigoEmpresa,
             statusCalidad,
             kilataje,
@@ -56,8 +56,8 @@ public sealed class ValorDelOroController : ControllerBase
             request.MaximoValor,
             request.MinimoValor);
 
-        await _valorDelOroDataService.CreateAsync(dto, cancellationToken);
-        var created = await _valorDelOroDataService.GetByKeyAsync(
+        await _valorDelOroRepository.CreateAsync(dto, cancellationToken);
+        var created = await _valorDelOroRepository.GetByKeyAsync(
             request.CodigoEmpresa,
             request.StatusCalidad,
             request.Kilataje,
@@ -91,13 +91,13 @@ public sealed class ValorDelOroController : ControllerBase
             request.MaximoValor,
             request.MinimoValor);
 
-        await _valorDelOroDataService.UpdateAsync(
+        await _valorDelOroRepository.UpdateAsync(
             codigoEmpresa,
             statusCalidad,
             kilataje,
             dto,
             cancellationToken);
-        var updated = await _valorDelOroDataService.GetByKeyAsync(
+        var updated = await _valorDelOroRepository.GetByKeyAsync(
             codigoEmpresa,
             statusCalidad,
             kilataje,
@@ -115,7 +115,7 @@ public sealed class ValorDelOroController : ControllerBase
         decimal kilataje,
         CancellationToken cancellationToken)
     {
-        await _valorDelOroDataService.DeleteAsync(
+        await _valorDelOroRepository.DeleteAsync(
             codigoEmpresa,
             statusCalidad,
             kilataje,

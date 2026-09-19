@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public sealed class UsuariosController : ControllerBase
 {
-    private readonly IUsuariosDataService _usuariosDataService;
+    private readonly IUsuariosRepository _usuariosRepository;
 
-    public UsuariosController(IUsuariosDataService usuariosDataService)
+    public UsuariosController(IUsuariosRepository usuariosRepository)
     {
-        _usuariosDataService = usuariosDataService;
+        _usuariosRepository = usuariosRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<UsuarioDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var usuarios = await _usuariosDataService.GetAllAsync(cancellationToken);
+        var usuarios = await _usuariosRepository.GetAllAsync(cancellationToken);
         return Ok(usuarios);
     }
 
@@ -31,7 +31,7 @@ public sealed class UsuariosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string modulo, string nombreUsuario, CancellationToken cancellationToken)
     {
-        var usuario = await _usuariosDataService.GetByKeyAsync(modulo, nombreUsuario, cancellationToken);
+        var usuario = await _usuariosRepository.GetByKeyAsync(modulo, nombreUsuario, cancellationToken);
         if (usuario is null)
         {
             return NotFound();
@@ -58,8 +58,8 @@ public sealed class UsuariosController : ControllerBase
             request.AccesoCashDrawer,
             request.UsuarioSoporte);
 
-        await _usuariosDataService.CreateAsync(dto, cancellationToken);
-        var created = await _usuariosDataService.GetByKeyAsync(request.Modulo, request.NombreUsuario, cancellationToken);
+        await _usuariosRepository.CreateAsync(dto, cancellationToken);
+        var created = await _usuariosRepository.GetByKeyAsync(request.Modulo, request.NombreUsuario, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { modulo = request.Modulo, nombreUsuario = request.NombreUsuario }, created);
     }
 
@@ -81,8 +81,8 @@ public sealed class UsuariosController : ControllerBase
             request.AccesoCashDrawer,
             request.UsuarioSoporte);
 
-        await _usuariosDataService.UpdateAsync(modulo, nombreUsuario, dto, cancellationToken);
-        var updated = await _usuariosDataService.GetByKeyAsync(request.Modulo, request.NombreUsuario, cancellationToken);
+        await _usuariosRepository.UpdateAsync(modulo, nombreUsuario, dto, cancellationToken);
+        var updated = await _usuariosRepository.GetByKeyAsync(request.Modulo, request.NombreUsuario, cancellationToken);
         return Ok(updated);
     }
 
@@ -90,7 +90,7 @@ public sealed class UsuariosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string modulo, string nombreUsuario, CancellationToken cancellationToken)
     {
-        await _usuariosDataService.DeleteAsync(modulo, nombreUsuario, cancellationToken);
+        await _usuariosRepository.DeleteAsync(modulo, nombreUsuario, cancellationToken);
         return NoContent();
     }
 }

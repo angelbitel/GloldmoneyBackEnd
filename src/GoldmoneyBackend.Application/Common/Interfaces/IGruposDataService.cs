@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface IGruposDataService
+public interface IGruposRepository
 {
     Task<IReadOnlyList<GrupoDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<GrupoDbDto?> GetByKeyAsync(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken);

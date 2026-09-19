@@ -5,16 +5,16 @@ namespace GoldmoneyBackend.Application.Sesiones.Commands.AbrirSesion;
 
 public sealed class AbrirSesionCommandHandler : IRequestHandler<AbrirSesionCommand, SesionAbiertaDto>
 {
-    private readonly ISesionesDataService _sesionesDataService;
+    private readonly ISesionesRepository _sesionesRepository;
 
-    public AbrirSesionCommandHandler(ISesionesDataService sesionesDataService)
+    public AbrirSesionCommandHandler(ISesionesRepository sesionesRepository)
     {
-        _sesionesDataService = sesionesDataService;
+        _sesionesRepository = sesionesRepository;
     }
 
     public Task<SesionAbiertaDto> Handle(AbrirSesionCommand request, CancellationToken cancellationToken)
     {
         var dto = new AbrirSesionDto(request.CodigoEmpresa, request.FechaApertura, request.UsuarioResponsable);
-        return _sesionesDataService.AbrirSesionAsync(dto, cancellationToken);
+        return _sesionesRepository.AbrirSesionAsync(dto, cancellationToken);
     }
 }

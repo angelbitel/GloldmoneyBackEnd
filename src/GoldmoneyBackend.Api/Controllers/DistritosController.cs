@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class DistritosController : ControllerBase
 {
-    private readonly IDistritosDataService _distritosDataService;
+    private readonly IDistritosRepository _distritosRepository;
 
-    public DistritosController(IDistritosDataService distritosDataService)
+    public DistritosController(IDistritosRepository distritosRepository)
     {
-        _distritosDataService = distritosDataService;
+        _distritosRepository = distritosRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<DistritoDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _distritosDataService.GetAllAsync(cancellationToken));
+        return Ok(await _distritosRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoDistrito}")]
@@ -30,7 +30,7 @@ public sealed class DistritosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoDistrito, CancellationToken cancellationToken)
     {
-        var distrito = await _distritosDataService.GetByKeyAsync(codigoDistrito, cancellationToken);
+        var distrito = await _distritosRepository.GetByKeyAsync(codigoDistrito, cancellationToken);
         return distrito is null ? NotFound() : Ok(distrito);
     }
 
@@ -40,8 +40,8 @@ public sealed class DistritosController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateDistritoRequest request, CancellationToken cancellationToken)
     {
         var dto = new DistritoDbUpsertDto(request.CodigoDistrito, request.CodigoProvincia, request.NombreDistrito, request.Activo);
-        await _distritosDataService.CreateAsync(dto, cancellationToken);
-        var created = await _distritosDataService.GetByKeyAsync(request.CodigoDistrito, cancellationToken);
+        await _distritosRepository.CreateAsync(dto, cancellationToken);
+        var created = await _distritosRepository.GetByKeyAsync(request.CodigoDistrito, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoDistrito = request.CodigoDistrito }, created);
     }
 
@@ -51,8 +51,8 @@ public sealed class DistritosController : ControllerBase
     public async Task<IActionResult> Update(string codigoDistrito, [FromBody] UpdateDistritoRequest request, CancellationToken cancellationToken)
     {
         var dto = new DistritoDbUpsertDto(codigoDistrito, request.CodigoProvincia, request.NombreDistrito, request.Activo);
-        await _distritosDataService.UpdateAsync(codigoDistrito, dto, cancellationToken);
-        var updated = await _distritosDataService.GetByKeyAsync(codigoDistrito, cancellationToken);
+        await _distritosRepository.UpdateAsync(codigoDistrito, dto, cancellationToken);
+        var updated = await _distritosRepository.GetByKeyAsync(codigoDistrito, cancellationToken);
         return Ok(updated);
     }
 
@@ -61,7 +61,7 @@ public sealed class DistritosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoDistrito, CancellationToken cancellationToken)
     {
-        await _distritosDataService.DeleteAsync(codigoDistrito, cancellationToken);
+        await _distritosRepository.DeleteAsync(codigoDistrito, cancellationToken);
         return NoContent();
     }
 }

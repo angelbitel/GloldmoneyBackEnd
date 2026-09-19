@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
-public sealed class SesionesDataService : ISesionesDataService
+public sealed class SesionesRepository : ISesionesRepository
 {
     // PARAMETROS_EMPRESA.cont_monto_caja: 1 = usar valor del dia anterior, 0 = usar monto inicial.
     private const decimal ManejoCajaInicioDia = 0m;
@@ -14,7 +14,7 @@ public sealed class SesionesDataService : ISesionesDataService
 
     private readonly LegacyDataDbContext _dbContext;
 
-    public SesionesDataService(LegacyDataDbContext dbContext)
+    public SesionesRepository(LegacyDataDbContext dbContext)
     {
         _dbContext = dbContext;
     }

@@ -18,12 +18,12 @@ namespace GoldmoneyBackend.Api.Controllers;
 public sealed class ClientesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IClientesDataService _clientesDataService;
+    private readonly IClientesRepository _clientesRepository;
 
-    public ClientesController(IMediator mediator, IClientesDataService clientesDataService)
+    public ClientesController(IMediator mediator, IClientesRepository clientesRepository)
     {
         _mediator = mediator;
-        _clientesDataService = clientesDataService;
+        _clientesRepository = clientesRepository;
     }
 
     [HttpPost]
@@ -49,7 +49,7 @@ public sealed class ClientesController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<ClienteDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] string? search, CancellationToken cancellationToken)
     {
-        var clientes = await _clientesDataService.GetAllAsync(search, cancellationToken);
+        var clientes = await _clientesRepository.GetAllAsync(search, cancellationToken);
         return Ok(clientes);
     }
 

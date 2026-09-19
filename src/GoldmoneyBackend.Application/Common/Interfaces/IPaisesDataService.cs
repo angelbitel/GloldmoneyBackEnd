@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface IPaisesDataService
+public interface IPaisesRepository
 {
     Task<IReadOnlyList<PaisDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<PaisDbDto?> GetByKeyAsync(string codigoPais, CancellationToken cancellationToken);

@@ -11,11 +11,11 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class EmpresasController : ControllerBase
 {
-    private readonly IEmpresasDataService _empresasDataService;
+    private readonly IEmpresasRepository _empresasRepository;
 
-    public EmpresasController(IEmpresasDataService empresasDataService)
+    public EmpresasController(IEmpresasRepository empresasRepository)
     {
-        _empresasDataService = empresasDataService;
+        _empresasRepository = empresasRepository;
     }
 
     [HttpPost]
@@ -34,7 +34,7 @@ public sealed class EmpresasController : ControllerBase
             request.ManejoCajaDep,
             request.CodEmpresaCaja);
 
-        await _empresasDataService.CreateAsync(dto, cancellationToken);
+        await _empresasRepository.CreateAsync(dto, cancellationToken);
         return StatusCode(StatusCodes.Status201Created);
     }
 
@@ -54,7 +54,7 @@ public sealed class EmpresasController : ControllerBase
             request.ManejoCajaDep,
             request.CodEmpresaCaja);
 
-        await _empresasDataService.UpdateAsync(dto, cancellationToken);
+        await _empresasRepository.UpdateAsync(dto, cancellationToken);
         return NoContent();
     }
 }

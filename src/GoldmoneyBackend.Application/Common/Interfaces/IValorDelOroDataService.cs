@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface IValorDelOroDataService
+public interface IValorDelOroRepository
 {
     Task<IReadOnlyList<ValorDelOroDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ValorDelOroDbDto?> GetByKeyAsync(

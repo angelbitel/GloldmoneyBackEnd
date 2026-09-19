@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
-public sealed class ClientesDataService : IClientesDataService
+public sealed class ClientesRepository : IClientesRepository
 {
     private readonly LegacyDataDbContext _dbContext;
 
-    public ClientesDataService(LegacyDataDbContext dbContext)
+    public ClientesRepository(LegacyDataDbContext dbContext)
     {
         _dbContext = dbContext;
     }

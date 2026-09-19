@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
-public sealed class CategoriasPrendaDataService : ICategoriasPrendaDataService
+public sealed class CategoriasPrendaRepository : ICategoriasPrendaRepository
 {
     private readonly LegacyDataDbContext _dbContext;
 
-    public CategoriasPrendaDataService(LegacyDataDbContext dbContext)
+    public CategoriasPrendaRepository(LegacyDataDbContext dbContext)
     {
         _dbContext = dbContext;
     }

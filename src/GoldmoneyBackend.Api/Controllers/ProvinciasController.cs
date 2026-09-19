@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class ProvinciasController : ControllerBase
 {
-    private readonly IProvinciasDataService _provinciasDataService;
+    private readonly IProvinciasRepository _provinciasRepository;
 
-    public ProvinciasController(IProvinciasDataService provinciasDataService)
+    public ProvinciasController(IProvinciasRepository provinciasRepository)
     {
-        _provinciasDataService = provinciasDataService;
+        _provinciasRepository = provinciasRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ProvinciaDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _provinciasDataService.GetAllAsync(cancellationToken));
+        return Ok(await _provinciasRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoProvincia}")]
@@ -30,7 +30,7 @@ public sealed class ProvinciasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoProvincia, CancellationToken cancellationToken)
     {
-        var provincia = await _provinciasDataService.GetByKeyAsync(codigoProvincia, cancellationToken);
+        var provincia = await _provinciasRepository.GetByKeyAsync(codigoProvincia, cancellationToken);
         return provincia is null ? NotFound() : Ok(provincia);
     }
 
@@ -40,8 +40,8 @@ public sealed class ProvinciasController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateProvinciaRequest request, CancellationToken cancellationToken)
     {
         var dto = new ProvinciaDbUpsertDto(request.CodigoProvincia, request.NombreProvincia, request.Activo);
-        await _provinciasDataService.CreateAsync(dto, cancellationToken);
-        var created = await _provinciasDataService.GetByKeyAsync(request.CodigoProvincia, cancellationToken);
+        await _provinciasRepository.CreateAsync(dto, cancellationToken);
+        var created = await _provinciasRepository.GetByKeyAsync(request.CodigoProvincia, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoProvincia = request.CodigoProvincia }, created);
     }
 
@@ -51,8 +51,8 @@ public sealed class ProvinciasController : ControllerBase
     public async Task<IActionResult> Update(string codigoProvincia, [FromBody] UpdateProvinciaRequest request, CancellationToken cancellationToken)
     {
         var dto = new ProvinciaDbUpsertDto(codigoProvincia, request.NombreProvincia, request.Activo);
-        await _provinciasDataService.UpdateAsync(codigoProvincia, dto, cancellationToken);
-        var updated = await _provinciasDataService.GetByKeyAsync(codigoProvincia, cancellationToken);
+        await _provinciasRepository.UpdateAsync(codigoProvincia, dto, cancellationToken);
+        var updated = await _provinciasRepository.GetByKeyAsync(codigoProvincia, cancellationToken);
         return Ok(updated);
     }
 
@@ -61,7 +61,7 @@ public sealed class ProvinciasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoProvincia, CancellationToken cancellationToken)
     {
-        await _provinciasDataService.DeleteAsync(codigoProvincia, cancellationToken);
+        await _provinciasRepository.DeleteAsync(codigoProvincia, cancellationToken);
         return NoContent();
     }
 }

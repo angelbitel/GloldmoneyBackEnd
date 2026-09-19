@@ -5,15 +5,15 @@ namespace GoldmoneyBackend.Application.Sesiones.Queries.GetEstadoSesiones;
 
 public sealed class GetEstadoSesionesQueryHandler : IRequestHandler<GetEstadoSesionesQuery, IReadOnlyList<EstadoSesionEmpresaDto>>
 {
-    private readonly ISesionesDataService _sesionesDataService;
+    private readonly ISesionesRepository _sesionesRepository;
 
-    public GetEstadoSesionesQueryHandler(ISesionesDataService sesionesDataService)
+    public GetEstadoSesionesQueryHandler(ISesionesRepository sesionesRepository)
     {
-        _sesionesDataService = sesionesDataService;
+        _sesionesRepository = sesionesRepository;
     }
 
     public Task<IReadOnlyList<EstadoSesionEmpresaDto>> Handle(GetEstadoSesionesQuery request, CancellationToken cancellationToken)
     {
-        return _sesionesDataService.GetEstadoSesionesAsync(cancellationToken);
+        return _sesionesRepository.GetEstadoSesionesAsync(cancellationToken);
     }
 }

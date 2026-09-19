@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface ICorregimientosDataService
+public interface ICorregimientosRepository
 {
     Task<IReadOnlyList<CorregimientoDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<CorregimientoDbDto?> GetByKeyAsync(string codigoCorregimiento, CancellationToken cancellationToken);

@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class GruposController : ControllerBase
 {
-    private readonly IGruposDataService _gruposDataService;
+    private readonly IGruposRepository _gruposRepository;
 
-    public GruposController(IGruposDataService gruposDataService)
+    public GruposController(IGruposRepository gruposRepository)
     {
-        _gruposDataService = gruposDataService;
+        _gruposRepository = gruposRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<GrupoDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _gruposDataService.GetAllAsync(cancellationToken));
+        return Ok(await _gruposRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoEmpresa}/{codigoGrupo:int}")]
@@ -30,7 +30,7 @@ public sealed class GruposController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
     {
-        var grupo = await _gruposDataService.GetByKeyAsync(codigoEmpresa, codigoGrupo, cancellationToken);
+        var grupo = await _gruposRepository.GetByKeyAsync(codigoEmpresa, codigoGrupo, cancellationToken);
         return grupo is null ? NotFound() : Ok(grupo);
     }
 
@@ -55,8 +55,8 @@ public sealed class GruposController : ControllerBase
             request.BloquearPlazo,
             request.TasaInteresNocturna);
 
-        await _gruposDataService.CreateAsync(dto, cancellationToken);
-        var created = await _gruposDataService.GetByKeyAsync(request.CodigoEmpresa, request.CodigoGrupo, cancellationToken);
+        await _gruposRepository.CreateAsync(dto, cancellationToken);
+        var created = await _gruposRepository.GetByKeyAsync(request.CodigoEmpresa, request.CodigoGrupo, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoEmpresa = request.CodigoEmpresa, codigoGrupo = request.CodigoGrupo }, created);
     }
 
@@ -85,8 +85,8 @@ public sealed class GruposController : ControllerBase
             request.BloquearPlazo,
             request.TasaInteresNocturna);
 
-        await _gruposDataService.UpdateAsync(codigoEmpresa, codigoGrupo, dto, cancellationToken);
-        var updated = await _gruposDataService.GetByKeyAsync(codigoEmpresa, codigoGrupo, cancellationToken);
+        await _gruposRepository.UpdateAsync(codigoEmpresa, codigoGrupo, dto, cancellationToken);
+        var updated = await _gruposRepository.GetByKeyAsync(codigoEmpresa, codigoGrupo, cancellationToken);
         return Ok(updated);
     }
 
@@ -95,7 +95,7 @@ public sealed class GruposController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
     {
-        await _gruposDataService.DeleteAsync(codigoEmpresa, codigoGrupo, cancellationToken);
+        await _gruposRepository.DeleteAsync(codigoEmpresa, codigoGrupo, cancellationToken);
         return NoContent();
     }
 }

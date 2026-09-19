@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface IParametrosEmpresaDataService
+public interface IParametrosEmpresaRepository
 {
     Task<IReadOnlyList<ParametrosEmpresaDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<ParametrosEmpresaDbDto?> GetByKeyAsync(string codigoEmpresa, CancellationToken cancellationToken);

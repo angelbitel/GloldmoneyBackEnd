@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class PaisesController : ControllerBase
 {
-    private readonly IPaisesDataService _paisesDataService;
+    private readonly IPaisesRepository _paisesRepository;
 
-    public PaisesController(IPaisesDataService paisesDataService)
+    public PaisesController(IPaisesRepository paisesRepository)
     {
-        _paisesDataService = paisesDataService;
+        _paisesRepository = paisesRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<PaisDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _paisesDataService.GetAllAsync(cancellationToken));
+        return Ok(await _paisesRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoPais}")]
@@ -30,7 +30,7 @@ public sealed class PaisesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoPais, CancellationToken cancellationToken)
     {
-        var pais = await _paisesDataService.GetByKeyAsync(codigoPais, cancellationToken);
+        var pais = await _paisesRepository.GetByKeyAsync(codigoPais, cancellationToken);
         return pais is null ? NotFound() : Ok(pais);
     }
 
@@ -40,8 +40,8 @@ public sealed class PaisesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreatePaisRequest request, CancellationToken cancellationToken)
     {
         var dto = new PaisDbUpsertDto(request.CodigoPais, request.NombrePais, request.Activo);
-        await _paisesDataService.CreateAsync(dto, cancellationToken);
-        var created = await _paisesDataService.GetByKeyAsync(request.CodigoPais, cancellationToken);
+        await _paisesRepository.CreateAsync(dto, cancellationToken);
+        var created = await _paisesRepository.GetByKeyAsync(request.CodigoPais, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoPais = request.CodigoPais }, created);
     }
 
@@ -51,8 +51,8 @@ public sealed class PaisesController : ControllerBase
     public async Task<IActionResult> Update(string codigoPais, [FromBody] UpdatePaisRequest request, CancellationToken cancellationToken)
     {
         var dto = new PaisDbUpsertDto(codigoPais, request.NombrePais, request.Activo);
-        await _paisesDataService.UpdateAsync(codigoPais, dto, cancellationToken);
-        var updated = await _paisesDataService.GetByKeyAsync(codigoPais, cancellationToken);
+        await _paisesRepository.UpdateAsync(codigoPais, dto, cancellationToken);
+        var updated = await _paisesRepository.GetByKeyAsync(codigoPais, cancellationToken);
         return Ok(updated);
     }
 
@@ -61,7 +61,7 @@ public sealed class PaisesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoPais, CancellationToken cancellationToken)
     {
-        await _paisesDataService.DeleteAsync(codigoPais, cancellationToken);
+        await _paisesRepository.DeleteAsync(codigoPais, cancellationToken);
         return NoContent();
     }
 }

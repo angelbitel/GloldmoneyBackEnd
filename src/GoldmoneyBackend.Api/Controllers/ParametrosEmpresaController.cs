@@ -11,18 +11,18 @@ namespace GoldmoneyBackend.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Backoffice)]
 public sealed class ParametrosEmpresaController : ControllerBase
 {
-    private readonly IParametrosEmpresaDataService _parametrosEmpresaDataService;
+    private readonly IParametrosEmpresaRepository _parametrosEmpresaRepository;
 
-    public ParametrosEmpresaController(IParametrosEmpresaDataService parametrosEmpresaDataService)
+    public ParametrosEmpresaController(IParametrosEmpresaRepository parametrosEmpresaRepository)
     {
-        _parametrosEmpresaDataService = parametrosEmpresaDataService;
+        _parametrosEmpresaRepository = parametrosEmpresaRepository;
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ParametrosEmpresaDbDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(await _parametrosEmpresaDataService.GetAllAsync(cancellationToken));
+        return Ok(await _parametrosEmpresaRepository.GetAllAsync(cancellationToken));
     }
 
     [HttpGet("{codigoEmpresa}")]
@@ -30,7 +30,7 @@ public sealed class ParametrosEmpresaController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByKey(string codigoEmpresa, CancellationToken cancellationToken)
     {
-        var parametros = await _parametrosEmpresaDataService.GetByKeyAsync(codigoEmpresa, cancellationToken);
+        var parametros = await _parametrosEmpresaRepository.GetByKeyAsync(codigoEmpresa, cancellationToken);
         return parametros is null ? NotFound() : Ok(parametros);
     }
 
@@ -93,8 +93,8 @@ public sealed class ParametrosEmpresaController : ControllerBase
             request.MostrarColumnaCantProducto,
             request.NoEtiquetasRetiros);
 
-        await _parametrosEmpresaDataService.CreateAsync(dto, cancellationToken);
-        var created = await _parametrosEmpresaDataService.GetByKeyAsync(request.CodigoEmpresa, cancellationToken);
+        await _parametrosEmpresaRepository.CreateAsync(dto, cancellationToken);
+        var created = await _parametrosEmpresaRepository.GetByKeyAsync(request.CodigoEmpresa, cancellationToken);
         return CreatedAtAction(nameof(GetByKey), new { codigoEmpresa = request.CodigoEmpresa }, created);
     }
 
@@ -160,8 +160,8 @@ public sealed class ParametrosEmpresaController : ControllerBase
             request.MostrarColumnaCantProducto,
             request.NoEtiquetasRetiros);
 
-        await _parametrosEmpresaDataService.UpdateAsync(codigoEmpresa, dto, cancellationToken);
-        var updated = await _parametrosEmpresaDataService.GetByKeyAsync(codigoEmpresa, cancellationToken);
+        await _parametrosEmpresaRepository.UpdateAsync(codigoEmpresa, dto, cancellationToken);
+        var updated = await _parametrosEmpresaRepository.GetByKeyAsync(codigoEmpresa, cancellationToken);
         return Ok(updated);
     }
 
@@ -170,7 +170,7 @@ public sealed class ParametrosEmpresaController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string codigoEmpresa, CancellationToken cancellationToken)
     {
-        await _parametrosEmpresaDataService.DeleteAsync(codigoEmpresa, cancellationToken);
+        await _parametrosEmpresaRepository.DeleteAsync(codigoEmpresa, cancellationToken);
         return NoContent();
     }
 }

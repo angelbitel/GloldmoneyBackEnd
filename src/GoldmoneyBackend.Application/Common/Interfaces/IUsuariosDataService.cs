@@ -1,6 +1,6 @@
 namespace GoldmoneyBackend.Application.Common.Interfaces;
 
-public interface IUsuariosDataService
+public interface IUsuariosRepository
 {
     Task<IReadOnlyList<UsuarioDbDto>> GetAllAsync(CancellationToken cancellationToken);
     Task<UsuarioDbDto?> GetByKeyAsync(string modulo, string nombreUsuario, CancellationToken cancellationToken);
