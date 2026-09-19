@@ -68,48 +68,50 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
             throw new DomainValidationException("Estimado usuario, debe confirmar la transaccion antes de salvar el contrato.");
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-        if (empresa.MontoAuxiliar.HasValue && empresa.MontoAuxiliar.Value < dto.CapitalPrestado)
+        await using (var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken))
         {
-            throw new DomainValidationException("Estimado usuario, el monto sobre el cual se dispone efectuar el empenio supera la cantidad en caja de la empresa.");
-        }
-
-        if (empresa.MontoAuxiliar.HasValue)
-        {
-            empresa.MontoAuxiliar -= dto.CapitalPrestado;
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        try
-        {
-            var valorRetorno = await EjecutarSpCreacionContratoAsync(dto, transaction, cancellationToken);
-
-            if (!valorRetorno.HasValue)
+            try
             {
-                throw new DomainValidationException("Estimado usuario, el proceso para grabar los datos no devolvio valores apropiados para la aplicacion.");
-            }
+                if (empresa.MontoAuxiliar.HasValue && empresa.MontoAuxiliar.Value < dto.CapitalPrestado)
+                {
+                    throw new DomainValidationException("Estimado usuario, el monto sobre el cual se dispone efectuar el empenio supera la cantidad en caja de la empresa.");
+                }
 
-            if (valorRetorno.Value != 0)
+                if (empresa.MontoAuxiliar.HasValue)
+                {
+                    empresa.MontoAuxiliar -= dto.CapitalPrestado;
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
+                var valorRetorno = await CrearContratoYClienteAsync(dto, cancellationToken);
+
+                if (!valorRetorno.HasValue)
+                {
+                    throw new DomainValidationException("Estimado usuario, el proceso para grabar los datos no devolvio valores apropiados para la aplicacion.");
+                }
+
+                if (valorRetorno.Value != 0)
+                {
+                    throw new DomainValidationException("Estimado usuario, un error dentro de los procesos utilizados para grabar el contrato fallo, verifique el mismo y vuelva a intentarlo.");
+                }
+
+                var codigoBarra = ConstruirCodigoBarra(dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
+
+                await GuardarDetalleContratoAsync(dto, codigoBarra, cancellationToken);
+                await IngresarMovimientoCajaAsync(dto, codigoBarra, transaction, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+                return codigoBarra;
+            }
+            catch (Exception ex)
             {
-                throw new DomainValidationException("Estimado usuario, un error dentro de los procesos utilizados para grabar el contrato fallo, verifique el mismo y vuelva a intentarlo.");
+                _logger.LogError(ex, "Error al crear contrato: {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
+                    dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
+                await transaction.RollbackAsync(cancellationToken);
+                throw new DomainValidationException($"No se pudo crear el contrato en tabla CONTRATOS. Detalle: {ex.Message}");
             }
-
-            var codigoBarra = ConstruirCodigoBarra(dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
-
-            await GuardarDetalleContratoAsync(dto, codigoBarra, transaction, cancellationToken);
-            await IngresarMovimientoCajaAsync(dto, codigoBarra, transaction, cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-            return codigoBarra;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al crear contrato: {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}",
-                dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
-            await transaction.RollbackAsync(cancellationToken);
-            throw new DomainValidationException($"No se pudo crear el contrato en tabla CONTRATOS. Detalle: {ex.Message}");
-        }
+
     }
 
     private static void ValidarDatosBase(CrearEmpenioContratoDto dto)
@@ -190,9 +192,8 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         }
     }
 
-    private async Task<int?> EjecutarSpCreacionContratoAsync(
+    private async Task<int?> CrearContratoYClienteAsync(
         CrearEmpenioContratoDto dto,
-        IDbContextTransaction transaction,
         CancellationToken cancellationToken)
     {
         try
@@ -286,7 +287,6 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
     private async Task GuardarDetalleContratoAsync(
         CrearEmpenioContratoDto dto,
         string codigoBarra,
-        IDbContextTransaction transaction,
         CancellationToken cancellationToken)
     {
         foreach (var detalle in dto.Detalles!)
