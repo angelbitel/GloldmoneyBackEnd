@@ -1,6 +1,7 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Empenios;
 using GoldmoneyBackend.Api.Mappings;
+using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Application.Empenios.Commands.CreateContrato;
 using GoldmoneyBackend.Application.Empenios.Queries.GetContratoById;
 using GoldmoneyBackend.Application.Empenios.Queries.GetContratosByCedula;
@@ -16,10 +17,12 @@ namespace GoldmoneyBackend.Api.Controllers;
 public sealed class EmpeniosController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IContratoNumeracionRepository _contratoNumeracionRepository;
 
-    public EmpeniosController(IMediator mediator)
+    public EmpeniosController(IMediator mediator, IContratoNumeracionRepository contratoNumeracionRepository)
     {
         _mediator = mediator;
+        _contratoNumeracionRepository = contratoNumeracionRepository;
     }
 
     [HttpGet("contratos/{id}")]
@@ -50,6 +53,15 @@ public sealed class EmpeniosController : ControllerBase
     {
         var contratos = await _mediator.Send(new GetContratosByCedulaQuery(cedula), cancellationToken);
         return Ok(contratos);
+    }
+
+    [HttpGet("contratos/proximo/{codigoEmpresa}/{codigoGrupo:int}")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(typeof(ProximoContratoDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetProximoNumeroContrato(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
+    {
+        var proximo = await _contratoNumeracionRepository.GetProximoAsync(codigoEmpresa, codigoGrupo, cancellationToken);
+        return Ok(proximo);
     }
 
     [HttpPost("contratos")]
