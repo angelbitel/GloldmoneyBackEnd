@@ -3,7 +3,6 @@ using GoldmoneyBackend.Domain.Common;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
@@ -98,7 +97,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
                 var codigoBarra = ConstruirCodigoBarra(dto.CodigoEmpresa, dto.CodigoGrupo, dto.NumeroContrato);
 
                 await GuardarDetalleContratoAsync(dto, codigoBarra, cancellationToken);
-                await IngresarMovimientoCajaAsync(dto, codigoBarra, transaction, cancellationToken);
+                await IngresarMovimientoCajaAsync(dto, codigoBarra, cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
                 return codigoBarra;
@@ -271,19 +270,6 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
         }
     }
 
-    private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
-    }
-
-    private static object TrimOrDbNull(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
-    }
-
     private async Task GuardarDetalleContratoAsync(
         CrearEmpenioContratoDto dto,
         string codigoBarra,
@@ -343,34 +329,58 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
     private async Task IngresarMovimientoCajaAsync(
         CrearEmpenioContratoDto dto,
         string codigoBarra,
-        IDbContextTransaction transaction,
         CancellationToken cancellationToken)
     {
         var tipoTransaccion = string.IsNullOrWhiteSpace(dto.TipoTransaccion)
             ? (EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN")
             : dto.TipoTransaccion.Trim();
 
-        var connection = _dbContext.Database.GetDbConnection();
+        var codigoEmpresa = dto.CodigoEmpresa.Trim();
 
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction.GetDbTransaction();
-        command.CommandText = @"
-            EXEC sp_ad_Movimiento_Caja
-                @codigo_empresa,
-                @codigo_grupo,
-                @codigo_barra,
-                @monto,
-                @tipo_transaccion,
-                @fecha_movimiento";
+        var ultimoMovimiento = await _dbContext.MovimientosCaja
+            .AsNoTracking()
+            .Where(x => x.CodigoEmpresa == codigoEmpresa)
+            .MaxAsync(x => (int?)x.NumeroMovimiento, cancellationToken) ?? 0;
 
-        AddParameter(command, "@codigo_empresa", dto.CodigoEmpresa.Trim());
-        AddParameter(command, "@codigo_grupo", dto.CodigoGrupo);
-        AddParameter(command, "@codigo_barra", codigoBarra);
-        AddParameter(command, "@monto", dto.CapitalPrestado);
-        AddParameter(command, "@tipo_transaccion", tipoTransaccion);
-        AddParameter(command, "@fecha_movimiento", Convert.ToDecimal(dto.FechaCreacion.Date.ToString("yyyyMMdd")));
+        var ahora = DateTime.UtcNow;
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        var movimiento = new MovimientoCajaDb
+        {
+            CodigoEmpresa = codigoEmpresa,
+            NumeroMovimiento = ultimoMovimiento + 1,
+            CodigoTransaccion = tipoTransaccion,
+            CodigoGrupo = dto.CodigoGrupo,
+            NumeroContrato = dto.NumeroContrato.Trim(),
+            MontoTransaccion = dto.CapitalPrestado,
+            FechaTransaccion = dto.FechaCreacion,
+            HoraTransaccion = ahora,
+            MotivoTransaccion = "CREACION CONTRATO",
+            UsuarioResponsable = dto.UsuarioResponsable.Trim()
+        };
+
+        _dbContext.MovimientosCaja.Add(movimiento);
+        _dbContext.MovimientosTemporales.Add(new MovimientoTemporalDb
+        {
+            CodigoEmpresa = movimiento.CodigoEmpresa,
+            NumeroMovimiento = movimiento.NumeroMovimiento,
+            CodigoTransaccion = movimiento.CodigoTransaccion,
+            CodigoGrupo = movimiento.CodigoGrupo,
+            NumeroContrato = movimiento.NumeroContrato,
+            MontoTransaccion = movimiento.MontoTransaccion,
+            FechaTransaccion = movimiento.FechaTransaccion,
+            HoraTransaccion = movimiento.HoraTransaccion,
+            MotivoTransaccion = movimiento.MotivoTransaccion,
+            UsuarioResponsable = movimiento.UsuarioResponsable
+        });
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new DomainValidationException($"No se pudo ingresar el movimiento de caja en tablas MOVIMIENTO_CAJA/MOVIMIENTO_TEMPORAL. Detalle: {ex.InnerException?.Message ?? ex.Message}");
+        }
     }
 
     private static string ConstruirCodigoBarra(string codigoEmpresa, int codigoGrupo, string numeroContrato)
@@ -391,11 +401,5 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
     private static bool EsProcesoNuevos(string procesoKey)
     {
         return string.Equals(procesoKey?.Trim(), ProcesoEmpeniosNuevos, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ToProperCase(string value)
-    {
-        var textInfo = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
-        return textInfo.ToTitleCase(value.Trim().ToLowerInvariant());
     }
 }
