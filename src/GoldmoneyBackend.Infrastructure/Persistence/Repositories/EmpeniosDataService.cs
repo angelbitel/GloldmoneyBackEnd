@@ -351,7 +351,6 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
             : dto.TipoTransaccion.Trim();
 
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.Transaction = transaction.GetDbTransaction();
