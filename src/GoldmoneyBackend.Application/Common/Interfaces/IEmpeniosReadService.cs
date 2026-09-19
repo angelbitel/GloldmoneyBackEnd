@@ -6,4 +6,5 @@ public interface IEmpeniosReadService
 {
     Task<ContratoDto?> GetContratoByIdAsync(string contratoId, CancellationToken cancellationToken);
     Task<IReadOnlyList<ContratoDto>> GetContratosByCedulaAsync(string cedula, CancellationToken cancellationToken);
+    Task<ContratoCompletoDto?> GetContratoCompletoByIdAsync(string contratoId, CancellationToken cancellationToken);
 }

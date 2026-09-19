@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IDistritosRepository, DistritosRepository>();
         services.AddScoped<ICorregimientosRepository, CorregimientosRepository>();
         services.AddScoped<ICategoriasPrendaRepository, CategoriasPrendaRepository>();
+        services.AddScoped<IContratoNumeracionRepository, ContratoNumeracionRepository>();
         services.AddScoped<ILegacyEmpenioRepository, LegacyEmpenioRepository>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();
         services.AddScoped<IAuthService, AuthService>();

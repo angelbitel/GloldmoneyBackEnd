@@ -31,6 +31,18 @@ public sealed class EmpeniosController : ControllerBase
         return Ok(contrato);
     }
 
+    [HttpGet("contratos/{id}/completo")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
+    [ProducesResponseType(typeof(ContratoCompletoDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetContratoCompleto(string id, CancellationToken cancellationToken)
+    {
+        var contrato = await _mediator.Send(new GetContratoByIdQuery(id), cancellationToken);
+        if (contrato is null) return NotFound();
+
+        var completo = await _mediator.Send(new GetContratoCompletoQuery(id), cancellationToken);
+        return Ok(completo);
+    }
+
     [HttpGet("clientes/{cedula}/contratos")]
     [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
     [ProducesResponseType(typeof(IReadOnlyList<ContratoDto>), StatusCodes.Status200OK)]
