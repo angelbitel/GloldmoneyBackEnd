@@ -58,7 +58,7 @@ public sealed class EmpeniosDataService : IEmpeniosDataService
             throw new DomainValidationException("Estimado usuario, es posible que la fecha ingresada no cumpla con el formato apropiado para el sistema.");
         }
 
-        if (dto.Serie.Trim().Length < 10)
+        if (dto.Serie.Trim().Length < 10 || dto.Serie.Trim().Length > 20)
         {
             throw new DomainValidationException("Estimado usuario, verifique el numero de Contrato, ya que no cumple con el formato establecido para efectuar el empenio.");
         }

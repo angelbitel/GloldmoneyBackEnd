@@ -20,7 +20,7 @@ public sealed class ContratoDbConfiguration : IEntityTypeConfiguration<ContratoD
         builder.Property(x => x.CodigoGrupo).HasColumnName("codigo_grupo");
         builder.Property(x => x.NumeroContrato).HasColumnName("numero_contrato").HasMaxLength(20).IsUnicode(false).IsRequired();
         builder.Property(x => x.IdCliente).HasColumnName("id_cliente").HasMaxLength(14).IsUnicode(false).IsRequired();
-        builder.Property(x => x.Serie).HasColumnName("serie").HasMaxLength(10).IsUnicode(false);
+        builder.Property(x => x.Serie).HasColumnName("serie").HasMaxLength(20).IsUnicode(false);
         builder.Property(x => x.FechaCreacion).HasColumnName("fecha_creacion");
         builder.Property(x => x.CapitalPrestado).HasColumnName("capital_prestado").HasColumnType("money");
         builder.Property(x => x.Interes).HasColumnName("interes").HasColumnType("decimal(4,2)");
