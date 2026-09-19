@@ -21,45 +21,22 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
             return null;
         }
 
-        var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync(cancellationToken);
+        var id = contratoId.Trim();
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
-            SELECT TOP 1
-                RTRIM(codigo_empresa) + CAST(codigo_grupo AS varchar(10)) + RTRIM(numero_contrato) AS contrato_id,
-                codigo_empresa,
-                codigo_grupo,
-                numero_contrato,
-                id_cliente,
-                fecha_creacion,
-                capital_prestado,
-                saldo_capital,
-                usuario_responsable
-            FROM CONTRATOS
-            WHERE RTRIM(codigo_empresa) + CAST(codigo_grupo AS varchar(10)) + RTRIM(numero_contrato) = @contrato_id";
-
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@contrato_id";
-        parameter.Value = contratoId.Trim();
-        command.Parameters.Add(parameter);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
-        {
-            return null;
-        }
-
-        return new ContratoDto(
-            reader.GetString(0).Trim(),
-            reader.GetString(1).Trim(),
-            reader.GetInt32(2),
-            reader.GetString(3).Trim(),
-            reader.IsDBNull(4) ? null : reader.GetString(4).Trim(),
-            reader.GetDateTime(5),
-            Convert.ToDecimal(reader.GetValue(6)),
-            Convert.ToDecimal(reader.GetValue(7)),
-            reader.IsDBNull(8) ? null : reader.GetString(8).Trim());
+        return await _dbContext.Contratos
+            .AsNoTracking()
+            .Where(x => (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
+            .Select(x => new ContratoDto(
+                x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim(),
+                x.CodigoEmpresa,
+                x.CodigoGrupo,
+                x.NumeroContrato,
+                x.IdCliente,
+                x.FechaCreacion ?? DateTime.MinValue,
+                x.CapitalPrestado ?? 0m,
+                x.SaldoCapital ?? 0m,
+                x.UsuarioResponsable))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<ContratoDto>> GetContratosByCedulaAsync(string cedula, CancellationToken cancellationToken)
@@ -69,46 +46,20 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
             return Array.Empty<ContratoDto>();
         }
 
-        var contratos = new List<ContratoDto>();
-        var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
-            SELECT
-                RTRIM(codigo_empresa) + CAST(codigo_grupo AS varchar(10)) + RTRIM(numero_contrato) AS contrato_id,
-                codigo_empresa,
-                codigo_grupo,
-                numero_contrato,
-                id_cliente,
-                fecha_creacion,
-                capital_prestado,
-                saldo_capital,
-                usuario_responsable
-            FROM CONTRATOS
-            WHERE id_cliente = @id_cliente
-            ORDER BY fecha_creacion DESC";
-
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@id_cliente";
-        parameter.Value = cedula.Trim();
-        command.Parameters.Add(parameter);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            contratos.Add(new ContratoDto(
-                reader.GetString(0).Trim(),
-                reader.GetString(1).Trim(),
-                reader.GetInt32(2),
-                reader.GetString(3).Trim(),
-                reader.IsDBNull(4) ? null : reader.GetString(4).Trim(),
-                reader.GetDateTime(5),
-                Convert.ToDecimal(reader.GetValue(6)),
-                Convert.ToDecimal(reader.GetValue(7)),
-                reader.IsDBNull(8) ? null : reader.GetString(8).Trim()));
-        }
-
-        return contratos;
+        return await _dbContext.Contratos
+            .AsNoTracking()
+            .Where(x => x.IdCliente == cedula.Trim())
+            .OrderByDescending(x => x.FechaCreacion)
+            .Select(x => new ContratoDto(
+                x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim(),
+                x.CodigoEmpresa,
+                x.CodigoGrupo,
+                x.NumeroContrato,
+                x.IdCliente,
+                x.FechaCreacion ?? DateTime.MinValue,
+                x.CapitalPrestado ?? 0m,
+                x.SaldoCapital ?? 0m,
+                x.UsuarioResponsable))
+            .ToListAsync(cancellationToken);
     }
 }
