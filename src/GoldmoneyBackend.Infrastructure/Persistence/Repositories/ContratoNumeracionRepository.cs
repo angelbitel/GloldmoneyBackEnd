@@ -17,17 +17,29 @@ public sealed class ContratoNumeracionRepository : IContratoNumeracionRepository
     public async Task<ProximoContratoDto> GetProximoAsync(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
     {
         var empresa = codigoEmpresa.Trim();
-        var codigoSecuencia = codigoGrupo.ToString();
 
-        // Obtener el siguiente número desde SECUENCIAS_EMPRESA (misma lógica que sp_GenerarSecuencia)
-        var proximoNumero = await ObtenerProximaSecuenciaAsync(empresa, codigoSecuencia, cancellationToken);
+        // Obtener la abreviatura del grupo desde GRUPOS para usarla como CodigoSecuencia en SECUENCIAS_EMPRESA
+        var grupo = await _dbContext.Grupos
+            .AsNoTracking()
+            .Where(x => x.CodigoEmpresa == empresa && x.CodigoGrupo == codigoGrupo)
+            .Select(x => new { x.AbreviaturaGrupo })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (grupo is null || string.IsNullOrWhiteSpace(grupo.AbreviaturaGrupo))
+            throw new InvalidOperationException(
+                $"No se encontró el grupo {codigoGrupo} para la empresa '{empresa}' o no tiene abreviatura definida.");
+
+        var abreviatura = grupo.AbreviaturaGrupo.Trim();
+
+        // Obtener el siguiente número desde SECUENCIAS_EMPRESA usando la abreviatura del grupo como CodigoSecuencia
+        var proximoNumero = await ObtenerProximaSecuenciaAsync(empresa, abreviatura, cancellationToken);
 
         // Buscar el siguiente número disponible que no exista ya en la base de datos
         const int maxAttempts = 1000;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
             var serie = proximoNumero.ToString("D10");
-            var numeroContrato = empresa + serie;
+            var numeroContrato = empresa + codigoGrupo.ToString() + serie;
 
             var existe = await _dbContext.Contratos
                 .AsNoTracking()
