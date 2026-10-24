@@ -2,15 +2,27 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build-api",
+      "label": "Backend: Build",
       "type": "shell",
-      "command": "dotnet",
-      "args": [
-        "build",
-        "${workspaceFolder}/src/GoldmoneyBackend.Api/GoldmoneyBackend.Api.csproj"
-      ],
-      "group": "build",
+      "command": "dotnet build GoldmoneyBackend.sln",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$msCompile"]
+    },
+    {
+      "label": "Backend: Test",
+      "type": "shell",
+      "command": "dotnet test GoldmoneyBackend.sln --no-build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "test"
+    },
+    {
+      "label": "Backend: Watch API",
+      "type": "shell",
+      "command": "dotnet watch run --project src/GoldmoneyBackend.Api/GoldmoneyBackend.Api.csproj",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": []
     }
   ]
 }
