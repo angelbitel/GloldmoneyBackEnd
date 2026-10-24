@@ -25,9 +25,10 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
 
         return await _dbContext.Contratos
             .AsNoTracking()
-            .Where(x => (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
+            .Where(x => x.NumeroContrato.Trim() == id
+                || (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
             .Select(x => new ContratoDto(
-                x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim(),
+                x.NumeroContrato.Trim(),
                 x.CodigoEmpresa,
                 x.CodigoGrupo,
                 x.NumeroContrato,
@@ -51,7 +52,7 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
             .Where(x => x.IdCliente == cedula.Trim())
             .OrderByDescending(x => x.FechaCreacion)
             .Select(x => new ContratoDto(
-                x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim(),
+                x.NumeroContrato.Trim(),
                 x.CodigoEmpresa,
                 x.CodigoGrupo,
                 x.NumeroContrato,
@@ -74,7 +75,8 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
 
         var contrato = await _dbContext.Contratos
             .AsNoTracking()
-            .Where(x => (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
+            .Where(x => x.NumeroContrato.Trim() == id
+                || (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
             .Select(x => new
             {
                 x.CodigoEmpresa,

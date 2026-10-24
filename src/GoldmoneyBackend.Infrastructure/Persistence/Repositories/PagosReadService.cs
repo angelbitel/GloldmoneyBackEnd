@@ -25,7 +25,8 @@ public sealed class PagosReadService : IPagosReadService
 
         var contrato = await _dbContext.Contratos
             .AsNoTracking()
-            .Where(x => (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
+            .Where(x => x.NumeroContrato.Trim() == id
+                || (x.CodigoEmpresa.Trim() + x.CodigoGrupo.ToString() + x.NumeroContrato.Trim()) == id)
             .Select(x => new ContratoPagoDto(
                 x.CodigoEmpresa,
                 x.CodigoGrupo,

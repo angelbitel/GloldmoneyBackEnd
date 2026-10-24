@@ -32,7 +32,7 @@ public sealed class PagosController : ControllerBase
     /// <summary>Devuelve únicamente el valor total a pagar de un contrato.</summary>
     [HttpGet("contratos/{id}/total")]
     [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
-    [ProducesResponseType(typeof(PagosPendientesDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTotalPagar(string id, CancellationToken cancellationToken)
     {

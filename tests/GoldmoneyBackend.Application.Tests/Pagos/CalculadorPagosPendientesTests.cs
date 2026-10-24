@@ -6,11 +6,28 @@ namespace GoldmoneyBackend.Application.Tests.Pagos;
 public sealed class CalculadorPagosPendientesTests
 {
     [Fact]
-    public void Calcular_Should_Return_No_Payments_When_Contract_Is_Expired()
+    public void Calcular_Should_Count_Overdue_Payments_Up_To_Vencimiento()
     {
         var hoy = DateTime.Today;
         var contrato = ContratoCon(
             ultimaFechaPago: hoy.AddMonths(-6),
+            fechaVencimiento: hoy.AddMonths(-1));
+
+        var resultado = CalculadorPagosPendientes.Calcular(contrato);
+
+        // 5 cuotas entre la última fecha de pago y el vencimiento, aunque el
+        // vencimiento ya haya pasado (cuotas vencidas pendientes).
+        resultado.CantidadPagos.Should().Be(5);
+        resultado.Pagos.Should().HaveCount(5);
+        resultado.TotalPagar.Should().BeGreaterThan(0m);
+    }
+
+    [Fact]
+    public void Calcular_Should_Return_No_Payments_When_Last_Payment_Reached_Vencimiento()
+    {
+        var hoy = DateTime.Today;
+        var contrato = ContratoCon(
+            ultimaFechaPago: hoy.AddMonths(-1),
             fechaVencimiento: hoy.AddMonths(-1));
 
         var resultado = CalculadorPagosPendientes.Calcular(contrato);
