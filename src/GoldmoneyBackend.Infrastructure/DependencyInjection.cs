@@ -1,6 +1,7 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Infrastructure.Authentication;
 using GoldmoneyBackend.Infrastructure.Authentication.Models;
+using GoldmoneyBackend.Infrastructure.Correo;
 using GoldmoneyBackend.Infrastructure.Persistence;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using GoldmoneyBackend.Infrastructure.Persistence.Repositories;
@@ -68,7 +69,25 @@ public static class DependencyInjection
         services.AddScoped<ILegacyEmpenioRepository, LegacyEmpenioRepository>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();
         services.AddScoped<IPagosReadService, PagosReadService>();
+        services.AddScoped<IAbonosRepository, AbonosRepository>();
+        services.AddScoped<IRetirosRepository, RetirosRepository>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ICuentasUsuarioService, CuentasUsuarioService>();
+
+        var correoSection = configuration.GetSection(CorreoOptions.SectionName);
+        services.Configure<CorreoOptions>(options =>
+        {
+            options.Host = correoSection["Host"] ?? string.Empty;
+            options.Port = int.TryParse(correoSection["Port"], out var port) ? port : 587;
+            options.EnableSsl = !bool.TryParse(correoSection["EnableSsl"], out var enableSsl) || enableSsl;
+            options.UserName = correoSection["UserName"] ?? string.Empty;
+            options.Password = correoSection["Password"] ?? string.Empty;
+            options.From = correoSection["From"] ?? string.Empty;
+            options.FromName = correoSection["FromName"] ?? "GoldMoney";
+            options.FrontendBaseUrl = correoSection["FrontendBaseUrl"] ?? "http://localhost:5173";
+            options.RegistrarEnlaceEnLog = bool.TryParse(correoSection["RegistrarEnlaceEnLog"], out var registrar) && registrar;
+        });
+        services.AddScoped<INotificadorCuentas, SmtpNotificadorCuentas>();
 
         return services;
     }

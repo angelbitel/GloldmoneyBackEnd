@@ -1,11 +1,14 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Auth;
 using GoldmoneyBackend.Application.Auth.Commands.Login;
+using GoldmoneyBackend.Application.Auth.Commands.RestablecerContrasena;
+using GoldmoneyBackend.Application.Auth.Commands.SolicitarRestablecimientoContrasena;
 using GoldmoneyBackend.Application.Auth.DTOs;
 using GoldmoneyBackend.Application.Auth.Queries.GetUsuarios;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GoldmoneyBackend.Api.Controllers;
 
@@ -28,6 +31,32 @@ public sealed class AuthController : ControllerBase
     {
         var token = await _mediator.Send(new LoginCommand(request.UserName, request.Password), cancellationToken);
         return Ok(token);
+    }
+
+    /// <summary>
+    /// Envía un enlace para restablecer la contraseña al correo registrado del usuario.
+    /// Responde siempre igual, exista o no la cuenta, para no revelar qué usuarios existen.
+    /// </summary>
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.RecuperacionContrasena)]
+    [HttpPost("recuperar-contrasena")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public async Task<IActionResult> RecuperarContrasena([FromBody] RecuperarContrasenaRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SolicitarRestablecimientoContrasenaCommand(request.UsuarioOCorreo), cancellationToken);
+        return Accepted(new { message = "Si el usuario tiene un correo registrado, recibirá un enlace para restablecer la contraseña." });
+    }
+
+    /// <summary>Cambia la contraseña con el token del enlace recibido por correo.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.RecuperacionContrasena)]
+    [HttpPost("restablecer-contrasena")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RestablecerContrasena([FromBody] RestablecerContrasenaRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RestablecerContrasenaCommand(request.Token, request.NuevaContrasena), cancellationToken);
+        return NoContent();
     }
 
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]

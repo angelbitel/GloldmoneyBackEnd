@@ -11,4 +11,5 @@ public sealed record UsuarioDbDto(
     int? DatosRetroactivos,
     int? EfectuarAnulacion,
     int? AccesoCashDrawer,
-    int? UsuarioSoporte);
+    int? UsuarioSoporte,
+    string? Correo = null);

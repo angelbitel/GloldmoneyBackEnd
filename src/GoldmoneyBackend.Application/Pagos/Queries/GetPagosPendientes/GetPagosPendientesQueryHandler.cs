@@ -15,14 +15,13 @@ public sealed class GetPagosPendientesQueryHandler : IRequestHandler<GetPagosPen
 
     public async Task<PagosPendientesDto> Handle(GetPagosPendientesQuery request, CancellationToken cancellationToken)
     {
-        // Equivale al status_proceso = 2 del SP sp_ad_abono_interes (contrato no encontrado).
-        var pagos = await _pagosReadService.GetPagosPendientesAsync(request.ContratoId, cancellationToken);
+        var contrato = await _pagosReadService.GetContratoAsync(request.ContratoId, cancellationToken);
 
-        if (pagos is null)
+        if (contrato is null)
         {
             throw new NotFoundDomainException("Contrato no encontrado.");
         }
 
-        return pagos;
+        return CalculadorCobro.CalcularPagosPendientes(contrato);
     }
 }

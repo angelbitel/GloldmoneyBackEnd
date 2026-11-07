@@ -74,35 +74,47 @@ public sealed class CreateContratoCommandHandler : IRequestHandler<CreateContrat
 
         try
         {
-            if (empresa.MontoAuxiliar.HasValue)
-                await _repository.UpdateMontoAuxiliarAsync(codigoEmpresa, empresa.MontoAuxiliar.Value - dto.CapitalPrestado, cancellationToken);
-
-            var clienteExistente = await _repository.GetClienteByIdAsync(dto.IdCliente, cancellationToken);
-            if (clienteExistente is null)
+            // Una sola transacción: la secuencia de caja y el saldo de la empresa se modifican
+            // en sentencias propias y deben revertirse si falla el resto del contrato.
+            return await _repository.EnTransaccionAsync(async ct =>
             {
-                _repository.AddCliente(new ClienteDbUpsertDto(
-                    dto.IdCliente, dto.Apellido, dto.Nombre, dto.Telefono,
-                    1, dto.Direccion, null, dto.CodigoPais, null, null, null));
-            }
+                if (empresa.MontoAuxiliar.HasValue)
+                {
+                    try
+                    {
+                        await _repository.DescontarCajaAsync(codigoEmpresa, dto.CapitalPrestado, ct);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Otro movimiento simultáneo dejó la caja por debajo del capital.
+                        throw new DomainValidationException("Estimado usuario, el monto sobre el cual se dispone efectuar el empenio supera la cantidad en caja de la empresa.");
+                    }
+                }
 
-            _repository.AddContrato(dto);
+                var clienteExistente = await _repository.GetClienteByIdAsync(dto.IdCliente, ct);
+                if (clienteExistente is null)
+                {
+                    _repository.AddCliente(new ClienteDbUpsertDto(
+                        dto.IdCliente, dto.Apellido, dto.Nombre, dto.Telefono,
+                        1, dto.Direccion, null, dto.CodigoPais, null, null, null));
+                }
 
-            foreach (var detalle in dto.Detalles)
-            {
-                var ultimaSecuencia = await _repository.GetUltimaSecuenciaDetalleAsync(codigoEmpresa, dto.CodigoGrupo, numeroContrato, cancellationToken);
-                _repository.AddDetalle(detalle, codigoEmpresa, dto.CodigoGrupo, numeroContrato, ultimaSecuencia + 1, detalle.CodigoTipoPrenda, dto.ControlReloj);
-            }
+                _repository.AddContrato(dto);
 
-            var codigoTransaccion = EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN";
-            var ultimoMovimiento = await _repository.GetUltimoNumeroMovimientoAsync(codigoEmpresa, cancellationToken);
-            var ahora = DateTime.UtcNow;
+                // El contrato es nuevo: sus detalles se numeran desde 1.
+                var secuencia = 0;
+                foreach (var detalle in dto.Detalles)
+                {
+                    _repository.AddDetalle(detalle, codigoEmpresa, dto.CodigoGrupo, numeroContrato, ++secuencia, detalle.CodigoTipoPrenda, dto.ControlReloj);
+                }
 
-            _repository.AddMovimientoCaja(dto, ultimoMovimiento + 1, codigoTransaccion, ahora);
-            _repository.AddMovimientoTemporal(dto, ultimoMovimiento + 1, codigoTransaccion, ahora);
+                var codigoTransaccion = EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN";
+                await _repository.AgregarMovimientoCajaAsync(dto, codigoTransaccion, ct);
 
-            await _repository.SaveChangesAsync(cancellationToken);
+                await _repository.SaveChangesAsync(ct);
 
-            return new CreateContratoResultDto(codigoBarra);
+                return new CreateContratoResultDto(codigoBarra);
+            }, cancellationToken);
         }
         catch (Exception ex)
         {

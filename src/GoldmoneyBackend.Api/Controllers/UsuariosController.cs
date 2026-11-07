@@ -1,6 +1,8 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Usuarios;
+using GoldmoneyBackend.Application.Auth.Commands.ActualizarCorreoUsuario;
 using GoldmoneyBackend.Application.Common.Interfaces;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,10 +14,17 @@ namespace GoldmoneyBackend.Api.Controllers;
 public sealed class UsuariosController : ControllerBase
 {
     private readonly IUsuariosRepository _usuariosRepository;
+    private readonly ICuentasUsuarioService _cuentasUsuarioService;
+    private readonly IMediator _mediator;
 
-    public UsuariosController(IUsuariosRepository usuariosRepository)
+    public UsuariosController(
+        IUsuariosRepository usuariosRepository,
+        ICuentasUsuarioService cuentasUsuarioService,
+        IMediator mediator)
     {
         _usuariosRepository = usuariosRepository;
+        _cuentasUsuarioService = cuentasUsuarioService;
+        _mediator = mediator;
     }
 
     [HttpGet]
@@ -23,7 +32,23 @@ public sealed class UsuariosController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var usuarios = await _usuariosRepository.GetAllAsync(cancellationToken);
-        return Ok(usuarios);
+        var correos = await _cuentasUsuarioService.GetCorreosAsync(cancellationToken);
+
+        return Ok(usuarios.Select(u => u with { Correo = correos.GetValueOrDefault(u.NombreUsuario.Trim()) }));
+    }
+
+    /// <summary>
+    /// Registra o cambia el correo del usuario (en todos sus módulos), usado para restablecer
+    /// la contraseña. Un correo vacío lo elimina.
+    /// </summary>
+    [HttpPut("{nombreUsuario}/correo")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ActualizarCorreo(string nombreUsuario, [FromBody] ActualizarCorreoUsuarioRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ActualizarCorreoUsuarioCommand(nombreUsuario, request.Correo), cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{modulo}/{nombreUsuario}")]

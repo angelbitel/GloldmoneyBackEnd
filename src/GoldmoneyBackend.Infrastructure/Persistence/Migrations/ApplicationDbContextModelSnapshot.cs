@@ -69,6 +69,67 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
 
                     b.ToTable("ClientesBackend", (string)null);
                 });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cuentas.RestablecimientoContrasena", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreadoEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiraEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NombreUsuario")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime?>("UsadoEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("NombreUsuario", "CreadoEnUtc");
+
+                    b.ToTable("RestablecimientosContrasena", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cuentas.UsuarioCorreo", b =>
+                {
+                    b.Property<string>("NombreUsuario")
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime>("ActualizadoEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("NombreUsuario");
+
+                    b.HasIndex("Correo")
+                        .IsUnique();
+
+                    b.ToTable("UsuariosCorreo", (string)null);
+                });
 #pragma warning restore 612, 618
         }
     }

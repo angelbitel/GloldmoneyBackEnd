@@ -86,6 +86,7 @@ if (hasHttpsEndpoint && !app.Environment.IsDevelopment())
 }
 
 app.UseCors(CorsPolicyName);
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/", () => Results.Ok(new { message = "Goldmoney Backend API is running", health = "/health", login = "/api/auth/login" }));

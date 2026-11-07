@@ -32,7 +32,9 @@ public sealed class LegacyDataDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ClienteDbConfiguration).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(ClienteDbConfiguration).Assembly,
+            type => type.Namespace == typeof(ClienteDbConfiguration).Namespace);
         base.OnModelCreating(modelBuilder);
     }
 }

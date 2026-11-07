@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using GoldmoneyBackend.Api.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -77,6 +78,23 @@ public static class ServiceCollectionExtensions
 
             options.AddPolicy(AuthorizationPolicies.ClientesDelete, policy =>
                 policy.RequireRole("Admin"));
+        });
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Detrás de un proxy (Render) todas las peticiones pueden llegar con la misma IP:
+            // el límite es holgado y el handler limita además las solicitudes por usuario.
+            options.AddPolicy(RateLimitPolicies.RecuperacionContrasena, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(15),
+                        QueueLimit = 0
+                    }));
         });
 
         return services;

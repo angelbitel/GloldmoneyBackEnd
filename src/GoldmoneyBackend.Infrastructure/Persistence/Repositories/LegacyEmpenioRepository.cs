@@ -14,6 +14,9 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
         _dbContext = dbContext;
     }
 
+    public Task<T> EnTransaccionAsync<T>(Func<CancellationToken, Task<T>> operacion, CancellationToken cancellationToken) =>
+        OperacionesCajaLegacy.EnTransaccionAsync(_dbContext, operacion, cancellationToken);
+
     public async Task<EmpresaCajaDto?> GetEmpresaByCodigoAsync(string codigoEmpresa, CancellationToken cancellationToken)
     {
         var entity = await _dbContext.Empresas
@@ -29,16 +32,8 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
             entity.ManejoCajaDep);
     }
 
-    public async Task UpdateMontoAuxiliarAsync(string codigoEmpresa, decimal nuevoMonto, CancellationToken cancellationToken)
-    {
-        var entity = await _dbContext.Empresas
-            .FirstOrDefaultAsync(x => x.CodigoEmpresa == codigoEmpresa.Trim(), cancellationToken);
-
-        if (entity is not null)
-        {
-            entity.MontoAuxiliar = nuevoMonto;
-        }
-    }
+    public Task DescontarCajaAsync(string codigoEmpresa, decimal monto, CancellationToken cancellationToken) =>
+        OperacionesCajaLegacy.ActualizarCajaEmpresaAsync(_dbContext, codigoEmpresa.Trim(), -monto, cancellationToken, exigirSaldo: true);
 
     public Task<bool> ContratoExistsAsync(string codigoEmpresa, int codigoGrupo, string numeroContrato, CancellationToken cancellationToken)
     {
@@ -108,19 +103,10 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
             FechaVencimiento = dto.FechaVencimiento,
             PlazoPago = dto.PlazoPago,
             UsuarioResponsable = dto.UsuarioResponsable.Trim(),
-            HoraTransaccion = DateTime.UtcNow,
+            // Fecha y hora local completas, como el VB6.
+            HoraTransaccion = OperacionesCajaLegacy.AhoraLocal(),
             MontoMaximo = dto.MontoMaximo
         });
-    }
-
-    public async Task<int> GetUltimaSecuenciaDetalleAsync(string codigoEmpresa, int codigoGrupo, string numeroContrato, CancellationToken cancellationToken)
-    {
-        return await _dbContext.DetallesContratos
-            .AsNoTracking()
-            .Where(x => x.CodigoEmpresa == codigoEmpresa
-                && x.CodigoGrupo == codigoGrupo
-                && x.NumeroContrato == numeroContrato)
-            .MaxAsync(x => (int?)x.SecuenciaContratos, cancellationToken) ?? 0;
     }
 
     public void AddDetalle(CrearEmpenioDetalleDto detalle, string codigoEmpresa, int codigoGrupo, string numeroContrato, int secuencia, int codigoCategoriaPrenda, int? controlReloj)
@@ -140,46 +126,20 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
         });
     }
 
-    public async Task<int> GetUltimoNumeroMovimientoAsync(string codigoEmpresa, CancellationToken cancellationToken)
+    public async Task AgregarMovimientoCajaAsync(CrearEmpenioContratoDto dto, string codigoTransaccion, CancellationToken cancellationToken)
     {
-        return await _dbContext.MovimientosCaja
-            .AsNoTracking()
-            .Where(x => x.CodigoEmpresa == codigoEmpresa)
-            .MaxAsync(x => (int?)x.NumeroMovimiento, cancellationToken) ?? 0;
-    }
-
-    public void AddMovimientoCaja(CrearEmpenioContratoDto dto, int numeroMovimiento, string codigoTransaccion, DateTime horaTransaccion)
-    {
-        _dbContext.MovimientosCaja.Add(new MovimientoCajaDb
-        {
-            CodigoEmpresa = dto.CodigoEmpresa.Trim(),
-            NumeroMovimiento = numeroMovimiento,
-            CodigoTransaccion = codigoTransaccion,
-            CodigoGrupo = dto.CodigoGrupo,
-            NumeroContrato = dto.NumeroContrato.Trim(),
-            MontoTransaccion = dto.CapitalPrestado,
-            FechaTransaccion = dto.FechaCreacion,
-            HoraTransaccion = horaTransaccion,
-            MotivoTransaccion = "CREACION CONTRATO",
-            UsuarioResponsable = dto.UsuarioResponsable.Trim()
-        });
-    }
-
-    public void AddMovimientoTemporal(CrearEmpenioContratoDto dto, int numeroMovimiento, string codigoTransaccion, DateTime horaTransaccion)
-    {
-        _dbContext.MovimientosTemporales.Add(new MovimientoTemporalDb
-        {
-            CodigoEmpresa = dto.CodigoEmpresa.Trim(),
-            NumeroMovimiento = numeroMovimiento,
-            CodigoTransaccion = codigoTransaccion,
-            CodigoGrupo = dto.CodigoGrupo,
-            NumeroContrato = dto.NumeroContrato.Trim(),
-            MontoTransaccion = dto.CapitalPrestado,
-            FechaTransaccion = dto.FechaCreacion,
-            HoraTransaccion = horaTransaccion,
-            MotivoTransaccion = "CREACION CONTRATO",
-            UsuarioResponsable = dto.UsuarioResponsable.Trim()
-        });
+        // Igual que el VB6: número de SEC_CAJA, fecha sin hora, hora sobre el 1900-01-01 y motivo 'NULL'.
+        await OperacionesCajaLegacy.AgregarMovimientoAsync(
+            _dbContext,
+            dto.CodigoEmpresa.Trim(),
+            dto.CodigoGrupo,
+            dto.NumeroContrato.Trim(),
+            codigoTransaccion,
+            dto.CapitalPrestado,
+            dto.FechaCreacion.Date,
+            OperacionesCajaLegacy.AhoraLocal(),
+            dto.UsuarioResponsable.Trim(),
+            cancellationToken);
     }
 
     public Task<bool> CategoriaPrendaExistsAsync(int codigoCategoriaPrenda, CancellationToken cancellationToken)
