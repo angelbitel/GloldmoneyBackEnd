@@ -3,6 +3,7 @@ using GoldmoneyBackend.Domain.Common;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
@@ -31,17 +32,19 @@ public sealed class SesionesRepository : ISesionesRepository
 
         foreach (var empresa in empresas)
         {
-            var ultimaSesionAbierta = await _dbContext.SesionesEmpresa
+            // Como en el VB6 (y en cobros y empeños): la última sesión está abierta mientras no
+            // tenga hora de cierre. status_sesion = 1 marca las sesiones ya cerradas.
+            var ultimaSesion = await _dbContext.SesionesEmpresa
                 .AsNoTracking()
-                .Where(x => x.CodigoEmpresa == empresa.CodigoEmpresa && x.StatusSesion == 1)
+                .Where(x => x.CodigoEmpresa == empresa.CodigoEmpresa)
                 .OrderByDescending(x => x.FechaApertura)
                 .FirstOrDefaultAsync(cancellationToken);
 
             resultado.Add(new EstadoSesionEmpresaDto(
                 empresa.CodigoEmpresa,
                 empresa.NombreEmpresa,
-                ultimaSesionAbierta is not null,
-                ultimaSesionAbierta?.FechaApertura));
+                ultimaSesion is { HoraCierre: null },
+                ultimaSesion?.FechaApertura));
         }
 
         return resultado;
@@ -70,51 +73,82 @@ public sealed class SesionesRepository : ISesionesRepository
             throw new NotFoundDomainException("La empresa no cuenta con parametros configurados en tabla PARAMETROS_EMPRESA.");
         }
 
-        var fechaServidor = await _dbContext.Database
-            .SqlQueryRaw<DateTime>("SELECT GETDATE() AS \"Value\"")
-            .FirstAsync(cancellationToken);
+        // Como el VB6: la sesión es del día local de la empresa, no de la fecha que mande el equipo.
+        var hoy = OperacionesCajaLegacy.AhoraLocal().Date;
 
-        if (dto.FechaApertura.Date > fechaServidor.Date)
+        return await OperacionesCajaLegacy.EnTransaccionAsync(_dbContext, async ct =>
         {
-            throw new DomainValidationException("La fecha de apertura no puede ser mayor que la fecha actual del servidor.");
+            // UPDLOCK + HOLDLOCK: dos aperturas simultáneas de la misma empresa se ejecutan una tras otra.
+            var ultimaSesion = await _dbContext.SesionesEmpresa
+                .FromSqlInterpolated($"""
+                    SELECT TOP (1) * FROM INICIO_CIERRE_SESION WITH (UPDLOCK, HOLDLOCK)
+                    WHERE codigo_empresa = {codigoEmpresa}
+                    ORDER BY fecha_apertura DESC
+                    """)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(ct);
+
+            // Una sola caja abierta por empresa: abierta = última sesión sin hora de cierre.
+            if (ultimaSesion is { HoraCierre: null })
+            {
+                throw new ConflictDomainException(
+                    $"La caja de la empresa ya está abierta (sesión del {ultimaSesion.FechaApertura:dd/MM/yyyy}). " +
+                    "Debe cerrarse antes de abrir otra.");
+            }
+
+            // Una sesión por día y siempre posterior a la última (clave codigo_empresa + fecha_apertura).
+            if (ultimaSesion is not null && ultimaSesion.FechaApertura.Date >= hoy)
+            {
+                throw new ConflictDomainException(
+                    $"La empresa ya tuvo una sesión el {ultimaSesion.FechaApertura:dd/MM/yyyy}; la próxima caja se abre otro día.");
+            }
+
+            var valorInicial = CalcularValorCajaInicial(parametrosEmpresa.ContMontoCaja, ultimaSesion?.ValorFinalCaja, empresa);
+
+            // sp_Gravar_Sesiones_Empresa: status 0 = abierta, sin hora ni usuario de cierre.
+            _dbContext.SesionesEmpresa.Add(new IniciarCierreSesionDb
+            {
+                CodigoEmpresa = codigoEmpresa,
+                FechaApertura = hoy,
+                UsuarioApertura = dto.UsuarioResponsable,
+                StatusSesion = 0,
+                ValorInicialCaja = valorInicial
+            });
+            await _dbContext.SaveChangesAsync(ct);
+
+            // También como sp_Gravar_Sesiones_Empresa: la caja de la empresa arranca en el valor inicial.
+            await _dbContext.Empresas
+                .Where(x => x.CodigoEmpresa == codigoEmpresa)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.MontoAuxiliar, valorInicial), ct);
+
+            await ActualizarSaldosDeLaEmpresaAsync(codigoEmpresa, ct);
+
+            return new SesionAbiertaDto(codigoEmpresa, hoy, valorInicial);
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// "Iniciar día" del VB6 (sp_Actualizar_Saldos_de_la_Empresa): recalcula saldo_actual e
+    /// interés mensual de los contratos a la fecha de la sesión recién abierta. Se ejecuta el
+    /// procedimiento original para que el resultado sea idéntico al del VB6.
+    /// </summary>
+    private async Task ActualizarSaldosDeLaEmpresaAsync(string codigoEmpresa, CancellationToken cancellationToken)
+    {
+        var conexion = _dbContext.Database.GetDbConnection();
+        await using var comando = conexion.CreateCommand();
+        comando.Transaction = _dbContext.Database.CurrentTransaction?.GetDbTransaction();
+        comando.CommandText = "EXEC sp_Actualizar_Saldos_de_la_Empresa @codigo_empresa";
+
+        var parametro = comando.CreateParameter();
+        parametro.ParameterName = "@codigo_empresa";
+        parametro.Value = codigoEmpresa;
+        comando.Parameters.Add(parametro);
+
+        var estado = Convert.ToInt32(await comando.ExecuteScalarAsync(cancellationToken));
+        if (estado != 0)
+        {
+            throw new DomainValidationException("No se pudieron actualizar los saldos de los contratos al abrir la caja.");
         }
-
-        var yaExiste = await _dbContext.SesionesEmpresa
-            .AsNoTracking()
-            .AnyAsync(x => x.CodigoEmpresa == codigoEmpresa && x.FechaApertura == dto.FechaApertura.Date, cancellationToken);
-
-        if (yaExiste)
-        {
-            throw new ConflictDomainException("Ya existe una sesion registrada para esa empresa en esa fecha de apertura.");
-        }
-
-        var ultimaSesionAbierta = await _dbContext.SesionesEmpresa
-            .AsNoTracking()
-            .Where(x => x.CodigoEmpresa == codigoEmpresa && x.StatusSesion == 1)
-            .OrderByDescending(x => x.FechaApertura)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var valorCajaGravar = CalcularValorCajaInicial(parametrosEmpresa.ContMontoCaja, ultimaSesionAbierta?.ValorFinalCaja, empresa);
-
-        _dbContext.SesionesEmpresa.Add(new IniciarCierreSesionDb
-        {
-            CodigoEmpresa = codigoEmpresa,
-            FechaApertura = dto.FechaApertura.Date,
-            UsuarioApertura = dto.UsuarioResponsable.Trim(),
-            StatusSesion = 1,
-            ValorInicialCaja = valorCajaGravar
-        });
-
-        try
-        {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new DomainValidationException($"No se pudo abrir la sesion en tabla INICIO_CIERRE_SESION. Detalle: {ex.InnerException?.Message ?? ex.Message}");
-        }
-
-        return new SesionAbiertaDto(codigoEmpresa, dto.FechaApertura.Date, valorCajaGravar);
     }
 
     private static decimal CalcularValorCajaInicial(decimal? contMontoCaja, decimal? valorFinalUltimaSesion, EmpresaDb empresa)

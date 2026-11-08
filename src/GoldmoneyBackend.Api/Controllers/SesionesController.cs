@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Sesiones;
 using GoldmoneyBackend.Application.Common.Interfaces;
@@ -31,20 +29,21 @@ public sealed class SesionesController : ControllerBase
         return Ok(estados);
     }
 
+    /// <summary>
+    /// Abre la caja de la empresa para hoy (fecha local), como el VB6. Responde 409 si la empresa
+    /// ya tiene una caja abierta o ya tuvo sesión hoy.
+    /// </summary>
     [HttpPost("abrir")]
     [ProducesResponseType(typeof(SesionAbiertaDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Abrir([FromBody] AbrirSesionRequest request, CancellationToken cancellationToken)
     {
-        var usuarioResponsable = User.FindFirstValue(JwtRegisteredClaimNames.UniqueName)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue(ClaimTypes.Name);
-
-        if (string.IsNullOrWhiteSpace(usuarioResponsable))
+        if (User.UsuarioResponsable() is not { } usuarioResponsable)
         {
             return Unauthorized();
         }
 
-        var command = new AbrirSesionCommand(request.CodigoEmpresa, request.FechaApertura, usuarioResponsable);
+        var command = new AbrirSesionCommand(request.CodigoEmpresa, usuarioResponsable);
         var sesion = await _mediator.Send(command, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, sesion);
     }

@@ -4,9 +4,12 @@ namespace GoldmoneyBackend.Application.Auth.Commands.RestablecerContrasena;
 
 public sealed class RestablecerContrasenaCommandValidator : AbstractValidator<RestablecerContrasenaCommand>
 {
-    /// <summary>Tamaño de USUARIOS.contrasena, que comparte con el VB6.</summary>
-    public const int LongitudMaxima = 25;
-    public const int LongitudMinima = 6;
+    /// <summary>
+    /// Límites de la contraseña del sistema nuevo, que se guarda como hash en UsuariosCredencial
+    /// (no en USUARIOS.contrasena, así que no depende de sus 25 caracteres).
+    /// </summary>
+    public const int LongitudMaxima = 128;
+    public const int LongitudMinima = 8;
 
     public RestablecerContrasenaCommandValidator()
     {

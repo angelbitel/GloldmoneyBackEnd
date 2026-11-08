@@ -1,5 +1,6 @@
 using FluentAssertions;
 using GoldmoneyBackend.Application.Auth;
+using GoldmoneyBackend.Application.Auth.Commands.CambiarContrasenaUsuario;
 using GoldmoneyBackend.Application.Auth.Commands.RestablecerContrasena;
 using GoldmoneyBackend.Application.Auth.Commands.SolicitarRestablecimientoContrasena;
 using GoldmoneyBackend.Application.Common.Interfaces;
@@ -82,14 +83,45 @@ public sealed class RestablecimientoContrasenaTests
     }
 
     [Theory]
-    [InlineData("12345", false)]                     // menos de 6
-    [InlineData("123456", true)]
-    [InlineData("1234567890123456789012345", true)]  // 25: tamaño de USUARIOS.contrasena
-    [InlineData("12345678901234567890123456", false)]
-    [InlineData(" clave1", false)]
-    public void Validator_Should_Respect_Legacy_Password_Column(string contrasena, bool valida)
+    [InlineData("1234567", false)]  // menos de 8
+    [InlineData("12345678", true)]
+    [InlineData("1234567890123456789012345678", true)]  // más de 25: ya no depende de USUARIOS.contrasena
+    [InlineData(" clave123", false)]
+    public void Validator_Should_Respect_Password_Length(string contrasena, bool valida)
     {
         var resultado = new RestablecerContrasenaCommandValidator().Validate(new RestablecerContrasenaCommand("token", contrasena));
+
+        resultado.IsValid.Should().Be(valida);
+    }
+
+    [Fact]
+    public async Task Cambiar_Should_Save_Password_For_Trimmed_User()
+    {
+        var cuentas = new CuentasFalsas { CambiarResultado = true };
+
+        await new CambiarContrasenaUsuarioCommandHandler(cuentas).Handle(new CambiarContrasenaUsuarioCommand(" mary ", "nueva123"), default);
+
+        cuentas.UsuarioCambiado.Should().Be("mary");
+        cuentas.ContrasenaGuardada.Should().Be("nueva123");
+    }
+
+    [Fact]
+    public async Task Cambiar_Should_Throw_NotFound_When_User_Does_Not_Exist()
+    {
+        var handler = new CambiarContrasenaUsuarioCommandHandler(new CuentasFalsas { CambiarResultado = false });
+
+        var accion = () => handler.Handle(new CambiarContrasenaUsuarioCommand("noexiste", "nueva123"), default);
+
+        await accion.Should().ThrowAsync<NotFoundDomainException>();
+    }
+
+    [Theory]
+    [InlineData("1234567", false)]
+    [InlineData("12345678", true)]
+    [InlineData("clave123 ", false)]
+    public void Cambiar_Validator_Should_Respect_Password_Length(string contrasena, bool valida)
+    {
+        var resultado = new CambiarContrasenaUsuarioCommandValidator().Validate(new CambiarContrasenaUsuarioCommand("mary", contrasena));
 
         resultado.IsValid.Should().Be(valida);
     }
@@ -138,6 +170,16 @@ public sealed class RestablecimientoContrasenaTests
             HashConsultado = tokenHash;
             ContrasenaGuardada = nuevaContrasena;
             return Task.FromResult(RestablecerResultado);
+        }
+
+        public bool CambiarResultado { get; init; }
+        public string? UsuarioCambiado { get; private set; }
+
+        public Task<bool> CambiarContrasenaAsync(string nombreUsuario, string nuevaContrasena, DateTime ahoraUtc, CancellationToken cancellationToken)
+        {
+            UsuarioCambiado = nombreUsuario;
+            ContrasenaGuardada = nuevaContrasena;
+            return Task.FromResult(CambiarResultado);
         }
 
         public Task<IReadOnlyDictionary<string, string>> GetCorreosAsync(CancellationToken cancellationToken) => throw new NotSupportedException();

@@ -38,7 +38,23 @@ public static class DependencyInjection
                     Roles = user.GetSection("Roles").GetChildren().Select(x => x.Value ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToList()
                 });
             }
+
+            foreach (var usuario in authSection.GetSection("RolesUsuarios").GetChildren())
+            {
+                options.RolesUsuarios[usuario.Key] = usuario.GetChildren()
+                    .Select(x => x.Value ?? string.Empty)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+            }
         });
+
+        var contrasenasSection = configuration.GetSection(ContrasenasOptions.SectionName);
+        services.Configure<ContrasenasOptions>(options =>
+        {
+            options.Iteraciones = int.TryParse(contrasenasSection["Iteraciones"], out var iteraciones) ? iteraciones : 600_000;
+            options.Pepper = contrasenasSection["Pepper"] ?? string.Empty;
+        });
+        services.AddSingleton<HasherContrasenas>();
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' no configurada.");
@@ -71,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<IPagosReadService, PagosReadService>();
         services.AddScoped<IAbonosRepository, AbonosRepository>();
         services.AddScoped<IRetirosRepository, RetirosRepository>();
+        services.AddScoped<ICobrosRepository, CobrosRepository>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICuentasUsuarioService, CuentasUsuarioService>();
 

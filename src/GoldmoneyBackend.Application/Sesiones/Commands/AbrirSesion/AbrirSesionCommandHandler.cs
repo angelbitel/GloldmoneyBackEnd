@@ -14,7 +14,7 @@ public sealed class AbrirSesionCommandHandler : IRequestHandler<AbrirSesionComma
 
     public Task<SesionAbiertaDto> Handle(AbrirSesionCommand request, CancellationToken cancellationToken)
     {
-        var dto = new AbrirSesionDto(request.CodigoEmpresa, request.FechaApertura, request.UsuarioResponsable);
+        var dto = new AbrirSesionDto(request.CodigoEmpresa.Trim(), request.UsuarioResponsable.Trim());
         return _sesionesRepository.AbrirSesionAsync(dto, cancellationToken);
     }
 }

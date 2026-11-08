@@ -1,5 +1,6 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Domain.Common;
+using GoldmoneyBackend.Domain.Empenios;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -7,9 +8,11 @@ namespace GoldmoneyBackend.Application.Empenios.Commands.CreateContrato;
 
 public sealed class CreateContratoCommandHandler : IRequestHandler<CreateContratoCommand, CreateContratoResultDto>
 {
-    private const string ProcesoPagosContratos = "PagosContratos";
-    private const string ProcesoEmpeniosActivos = "EmpeniosActivos";
-    private const string ProcesoEmpeniosNuevos = "EmpeniosNuevos";
+    /// <summary>Código de transacción del VB6 para un empeño nuevo en MOVIMIENTO_CAJA.</summary>
+    private const string TransaccionEmpenioNuevo = "EN";
+
+    /// <summary>Números ya ocupados que se saltan si la secuencia quedó por detrás de CONTRATOS.</summary>
+    private const int IntentosNumeracion = 100;
 
     private readonly ILegacyEmpenioRepository _repository;
     private readonly ILogger<CreateContratoCommandHandler> _logger;
@@ -24,65 +27,48 @@ public sealed class CreateContratoCommandHandler : IRequestHandler<CreateContrat
 
     public async Task<CreateContratoResultDto> Handle(CreateContratoCommand request, CancellationToken cancellationToken)
     {
-        var dto = MapToDto(request);
+        var codigoEmpresa = request.CodigoEmpresa.Trim();
+        var idCliente = request.IdCliente.Trim();
 
-        if (!EsProcesoValido(dto.ProcesoKey))
-            throw new DomainValidationException("Estimado usuario, el tipo de proceso indicado no es reconocido por el sistema.");
+        var empresa = await _repository.GetEmpresaByCodigoAsync(codigoEmpresa, cancellationToken)
+            ?? throw new NotFoundDomainException("Estimado usuario, el sistema no pudo encontrar la empresa solicitada.");
 
-        if (dto.FechaCreacion.Year < 1000)
-            throw new DomainValidationException("Estimado usuario, es posible que la fecha ingresada no cumpla con el formato apropiado para el sistema.");
+        var fechaSesion = await _repository.GetFechaSesionAbiertaAsync(codigoEmpresa, cancellationToken)
+            ?? throw new DomainValidationException("Estimado usuario, no hay una sesión de caja abierta para la empresa.");
 
-        if (dto.ConfirmadoPorUsuario == false)
-            throw new DomainValidationException("Estimado usuario, debe confirmar la transaccion antes de salvar el contrato.");
+        var grupo = await _repository.GetGrupoAsync(codigoEmpresa, request.CodigoGrupo, cancellationToken);
+        if (grupo is null || !grupo.Activo)
+            throw new DomainValidationException("Estimado usuario, el grupo seleccionado no existe o no está activo.");
+        if (string.IsNullOrWhiteSpace(grupo.Abreviatura))
+            throw new DomainValidationException("Estimado usuario, el grupo seleccionado no tiene abreviatura para numerar sus contratos.");
+        if (grupo.PlazoMeses <= 0)
+            throw new DomainValidationException("Estimado usuario, el grupo seleccionado no tiene un plazo válido.");
 
-        if (EsProcesoActivos(dto.ProcesoKey) && string.IsNullOrWhiteSpace(dto.NumeroContrato))
-            throw new DomainValidationException("Estimado usuario, no ha ingresado un numero de contrato valido para el contrato a ingresar.");
-
-        var empresa = await _repository.GetEmpresaByCodigoAsync(dto.CodigoEmpresa, cancellationToken);
-        if (empresa is null)
-            throw new NotFoundDomainException("Estimado usuario, el sistema no pudo encontrar la empresa solicitada.");
-
-        if (dto.ControlaCajaPorUsuario == true && string.IsNullOrWhiteSpace(dto.UsuarioResponsable))
-            throw new DomainValidationException("Estimado usuario, no se encontro el usuario responsable para el movimiento de caja.");
-
-        if (dto.MontoMinimoEmpenio.HasValue && dto.CapitalPrestado < dto.MontoMinimoEmpenio.Value)
-            throw new DomainValidationException("El capital del contrato es menor que la cantidad minima establecida en la empresa.");
-
-        if (empresa.MontoAuxiliar.HasValue && empresa.MontoAuxiliar.Value < dto.CapitalPrestado)
+        if (empresa.MontoAuxiliar.HasValue && empresa.MontoAuxiliar.Value < request.CapitalPrestado)
             throw new DomainValidationException("Estimado usuario, el monto sobre el cual se dispone efectuar el empenio supera la cantidad en caja de la empresa.");
 
-        var existe = await _repository.ContratoExistsAsync(dto.CodigoEmpresa.Trim(), dto.CodigoGrupo, dto.NumeroContrato.Trim(), cancellationToken);
-        if (existe)
-            throw new ConflictDomainException("Ya existe un contrato con esa clave.");
-
-        if (dto.Detalles is null || dto.Detalles.Count == 0)
-            throw new DomainValidationException("Estimado usuario, debe ingresar al menos un detalle para el nuevo contrato.");
-
-        foreach (var detalle in dto.Detalles)
+        foreach (var codigoPrenda in request.Detalles.Select(d => d.CodigoTipoPrenda).Distinct())
         {
-            if (detalle.CodigoTipoPrenda <= 0)
-                throw new DomainValidationException("Estimado usuario, cada detalle debe contener un codigo de tipo de prenda valido.");
-
-            var existePrenda = await _repository.CategoriaPrendaExistsAsync(detalle.CodigoTipoPrenda, cancellationToken);
-            if (!existePrenda)
-                throw new DomainValidationException($"Estimado usuario, el tipo de prenda con codigo {detalle.CodigoTipoPrenda} no existe en el sistema.");
+            if (!await _repository.CategoriaPrendaExistsAsync(codigoPrenda, cancellationToken))
+                throw new DomainValidationException($"Estimado usuario, el tipo de prenda con codigo {codigoPrenda} no existe en el sistema.");
         }
 
-        var codigoEmpresa = dto.CodigoEmpresa.Trim();
-        var numeroContrato = dto.NumeroContrato.Trim();
-        var codigoBarra = ConstruirCodigoBarra(codigoEmpresa, dto.CodigoGrupo, numeroContrato);
+        var clienteExistente = await _repository.GetClienteByIdAsync(idCliente, cancellationToken);
+        if (clienteExistente is null && (string.IsNullOrWhiteSpace(request.Nombre) || string.IsNullOrWhiteSpace(request.Apellido)))
+            throw new DomainValidationException("Estimado usuario, el cliente no existe: indique su nombre y apellido para registrarlo.");
+
+        var calculo = CalculoEmpenio.Calcular(request.CapitalPrestado, grupo.TasaInteres, grupo.PlazoMeses, fechaSesion);
 
         try
         {
-            // Una sola transacción: la secuencia de caja y el saldo de la empresa se modifican
-            // en sentencias propias y deben revertirse si falla el resto del contrato.
+            // Una sola transacción: la secuencia, la caja y el contrato se revierten juntos si algo falla.
             return await _repository.EnTransaccionAsync(async ct =>
             {
                 if (empresa.MontoAuxiliar.HasValue)
                 {
                     try
                     {
-                        await _repository.DescontarCajaAsync(codigoEmpresa, dto.CapitalPrestado, ct);
+                        await _repository.DescontarCajaAsync(codigoEmpresa, request.CapitalPrestado, ct);
                     }
                     catch (InvalidOperationException)
                     {
@@ -91,65 +77,82 @@ public sealed class CreateContratoCommandHandler : IRequestHandler<CreateContrat
                     }
                 }
 
-                var clienteExistente = await _repository.GetClienteByIdAsync(dto.IdCliente, ct);
+                var (numeroContrato, serie) = await ReservarNumeroAsync(codigoEmpresa, request.CodigoGrupo, grupo.Abreviatura!.Trim(), ct);
+
                 if (clienteExistente is null)
                 {
                     _repository.AddCliente(new ClienteDbUpsertDto(
-                        dto.IdCliente, dto.Apellido, dto.Nombre, dto.Telefono,
-                        1, dto.Direccion, null, dto.CodigoPais, null, null, null));
+                        idCliente, request.Apellido?.Trim(), request.Nombre?.Trim(), request.Telefono?.Trim(),
+                        1, request.Direccion?.Trim(), null, request.CodigoPais?.Trim(), null, null, null));
                 }
 
-                _repository.AddContrato(dto);
+                var contrato = new CrearEmpenioContratoDto(
+                    codigoEmpresa,
+                    request.CodigoGrupo,
+                    numeroContrato,
+                    serie,
+                    idCliente,
+                    calculo.FechaCreacion,
+                    request.CapitalPrestado,
+                    grupo.TasaInteres,
+                    calculo.InteresMensual,
+                    calculo.UltimaFechaPago,
+                    calculo.FechaVencimiento,
+                    grupo.PlazoMeses,
+                    request.UsuarioResponsable.Trim());
+
+                _repository.AddContrato(contrato);
 
                 // El contrato es nuevo: sus detalles se numeran desde 1.
                 var secuencia = 0;
-                foreach (var detalle in dto.Detalles)
+                foreach (var detalle in request.Detalles)
                 {
-                    _repository.AddDetalle(detalle, codigoEmpresa, dto.CodigoGrupo, numeroContrato, ++secuencia, detalle.CodigoTipoPrenda, dto.ControlReloj);
+                    _repository.AddDetalle(
+                        new CrearEmpenioDetalleDto(detalle.CodigoTipoPrenda, detalle.Descripcion, detalle.Peso, detalle.Kilataje, detalle.Cantidad),
+                        codigoEmpresa, request.CodigoGrupo, numeroContrato, ++secuencia);
                 }
 
-                var codigoTransaccion = EsProcesoActivos(dto.ProcesoKey) ? "EA" : "EN";
-                await _repository.AgregarMovimientoCajaAsync(dto, codigoTransaccion, ct);
-
+                await _repository.AgregarMovimientoCajaAsync(contrato, TransaccionEmpenioNuevo, ct);
                 await _repository.SaveChangesAsync(ct);
 
-                return new CreateContratoResultDto(codigoBarra);
+                return new CreateContratoResultDto(
+                    string.Concat(codigoEmpresa, request.CodigoGrupo.ToString(), numeroContrato),
+                    codigoEmpresa,
+                    request.CodigoGrupo,
+                    numeroContrato,
+                    serie,
+                    calculo.FechaCreacion,
+                    calculo.FechaVencimiento,
+                    request.CapitalPrestado,
+                    grupo.TasaInteres,
+                    calculo.InteresMensual,
+                    grupo.PlazoMeses);
             }, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not DomainException)
         {
-            _logger.LogError(ex, "Error al crear contrato {CodigoEmpresa}/{CodigoGrupo}/{NumeroContrato}", codigoEmpresa, dto.CodigoGrupo, numeroContrato);
+            _logger.LogError(ex, "Error al crear contrato {CodigoEmpresa}/{CodigoGrupo} para {IdCliente}", codigoEmpresa, request.CodigoGrupo, idCliente);
             throw;
         }
     }
 
-    private static CrearEmpenioContratoDto MapToDto(CreateContratoCommand request)
+    /// <summary>
+    /// Toma la siguiente secuencia del grupo. Si ese número ya existe en CONTRATOS (la secuencia
+    /// quedó por detrás), sigue con la próxima, igual que la vista previa del número.
+    /// </summary>
+    private async Task<(string NumeroContrato, string Serie)> ReservarNumeroAsync(
+        string codigoEmpresa, int codigoGrupo, string abreviatura, CancellationToken cancellationToken)
     {
-        var detalles = request.Detalles?.Select(d => new CrearEmpenioDetalleDto(
-            d.CodigoTipoPrenda, d.Descripcion, d.Peso, d.Kilataje,
-            d.Cantidad, d.MontoAvaluo, d.MontoPrestamoDetalle, d.Observacion)).ToList();
+        for (var intento = 0; intento < IntentosNumeracion; intento++)
+        {
+            var secuencia = await _repository.SiguienteSecuenciaGrupoAsync(codigoEmpresa, abreviatura, cancellationToken);
+            var numero = CalculoEmpenio.Numerar(codigoEmpresa, codigoGrupo, secuencia);
 
-        return new CrearEmpenioContratoDto(
-            request.CodigoEmpresa, request.CodigoGrupo, request.NumeroContrato,
-            request.IdCliente, request.Serie, request.FechaCreacion,
-            request.CapitalPrestado, request.Interes, request.SaldoActual,
-            request.Mensualidad, request.Observacion, request.UltimaFechaPago,
-            request.SaldoCapital, request.FechaVencimiento, request.PlazoPago,
-            request.Nombre, request.Apellido, request.Direccion, request.Telefono,
-            request.MontoMaximo, request.UsuarioResponsable, request.CodigoPais,
-            request.ProcesoKey, request.MontoMinimoEmpenio, request.ControlaCajaPorUsuario,
-            request.ConfirmadoPorUsuario, request.TrabajoConKilates, request.ControlReloj,
-            request.TipoTransaccion, detalles);
+            if (!await _repository.ContratoExistsAsync(codigoEmpresa, codigoGrupo, numero.NumeroContrato, cancellationToken))
+                return numero;
+        }
+
+        throw new DomainValidationException(
+            $"Estimado usuario, no se encontró un número de contrato libre para el grupo {abreviatura}. Revise la secuencia en SECUENCIAS_EMPRESA.");
     }
-
-    private static bool EsProcesoValido(string procesoKey) =>
-        string.Equals(procesoKey?.Trim(), ProcesoPagosContratos, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(procesoKey?.Trim(), ProcesoEmpeniosActivos, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(procesoKey?.Trim(), ProcesoEmpeniosNuevos, StringComparison.OrdinalIgnoreCase);
-
-    private static bool EsProcesoActivos(string procesoKey) =>
-        string.Equals(procesoKey?.Trim(), ProcesoEmpeniosActivos, StringComparison.OrdinalIgnoreCase);
-
-    private static string ConstruirCodigoBarra(string codigoEmpresa, int codigoGrupo, string numeroContrato) =>
-        string.Concat(codigoEmpresa.Trim(), codigoGrupo.ToString(), numeroContrato.Trim());
 }

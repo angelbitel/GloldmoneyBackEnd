@@ -1,6 +1,7 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Usuarios;
 using GoldmoneyBackend.Application.Auth.Commands.ActualizarCorreoUsuario;
+using GoldmoneyBackend.Application.Auth.Commands.CambiarContrasenaUsuario;
 using GoldmoneyBackend.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -48,6 +49,17 @@ public sealed class UsuariosController : ControllerBase
     public async Task<IActionResult> ActualizarCorreo(string nombreUsuario, [FromBody] ActualizarCorreoUsuarioRequest request, CancellationToken cancellationToken)
     {
         await _mediator.Send(new ActualizarCorreoUsuarioCommand(nombreUsuario, request.Correo), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Asigna la contraseña del sistema nuevo al usuario; la del VB6 no cambia.</summary>
+    [HttpPut("{nombreUsuario}/contrasena")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CambiarContrasena(string nombreUsuario, [FromBody] CambiarContrasenaUsuarioRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new CambiarContrasenaUsuarioCommand(nombreUsuario, request.NuevaContrasena), cancellationToken);
         return NoContent();
     }
 

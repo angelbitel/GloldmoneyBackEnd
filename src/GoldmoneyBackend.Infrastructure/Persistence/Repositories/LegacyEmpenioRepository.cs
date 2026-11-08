@@ -32,6 +32,33 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
             entity.ManejoCajaDep);
     }
 
+    public async Task<GrupoEmpenioDto?> GetGrupoAsync(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
+    {
+        var grupo = await _dbContext.Grupos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.CodigoEmpresa == codigoEmpresa && x.CodigoGrupo == codigoGrupo, cancellationToken);
+
+        if (grupo is null) return null;
+
+        return new GrupoEmpenioDto(
+            grupo.CodigoEmpresa,
+            grupo.CodigoGrupo,
+            grupo.AbreviaturaGrupo,
+            grupo.TasaInteres ?? 0m,
+            (int)(grupo.MesesPlazo ?? 0m),
+            // GRUPOS.estado_grupo: 1 = activo.
+            grupo.EstadoGrupo == 1);
+    }
+
+    public async Task<DateTime?> GetFechaSesionAbiertaAsync(string codigoEmpresa, CancellationToken cancellationToken)
+    {
+        var (fechaSesion, _) = await OperacionesCajaLegacy.GetSesionAbiertaAsync(_dbContext, codigoEmpresa, cancellationToken);
+        return fechaSesion;
+    }
+
+    public Task<int> SiguienteSecuenciaGrupoAsync(string codigoEmpresa, string abreviaturaGrupo, CancellationToken cancellationToken) =>
+        OperacionesCajaLegacy.SiguienteSecuenciaAsync(_dbContext, codigoEmpresa, abreviaturaGrupo, cancellationToken);
+
     public Task DescontarCajaAsync(string codigoEmpresa, decimal monto, CancellationToken cancellationToken) =>
         OperacionesCajaLegacy.ActualizarCajaEmpresaAsync(_dbContext, codigoEmpresa.Trim(), -monto, cancellationToken, exigirSaldo: true);
 
@@ -85,31 +112,33 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
 
     public void AddContrato(CrearEmpenioContratoDto dto)
     {
+        // Mismos valores que un contrato del VB6 recién creado: los saldos y el monto máximo
+        // empiezan en el capital y no lleva observación.
         _dbContext.Contratos.Add(new ContratoDb
         {
-            CodigoEmpresa = dto.CodigoEmpresa.Trim(),
+            CodigoEmpresa = dto.CodigoEmpresa,
             CodigoGrupo = dto.CodigoGrupo,
-            NumeroContrato = dto.NumeroContrato.Trim(),
+            NumeroContrato = dto.NumeroContrato,
             IdCliente = dto.IdCliente,
-            Serie = dto.Serie.Trim(),
+            Serie = dto.Serie,
             FechaCreacion = dto.FechaCreacion,
             CapitalPrestado = dto.CapitalPrestado,
-            Interes = dto.Interes,
-            SaldoActual = dto.SaldoActual,
-            InteresMensual = dto.Mensualidad,
-            Observacion = string.IsNullOrWhiteSpace(dto.Observacion) ? null : dto.Observacion.Trim(),
+            Interes = dto.TasaInteres,
+            SaldoActual = dto.CapitalPrestado,
+            InteresMensual = dto.InteresMensual,
+            Observacion = null,
             UltimaFechaPago = dto.UltimaFechaPago,
-            SaldoCapital = dto.SaldoCapital,
+            SaldoCapital = dto.CapitalPrestado,
             FechaVencimiento = dto.FechaVencimiento,
-            PlazoPago = dto.PlazoPago,
-            UsuarioResponsable = dto.UsuarioResponsable.Trim(),
+            PlazoPago = dto.PlazoMeses,
+            UsuarioResponsable = dto.UsuarioResponsable,
             // Fecha y hora local completas, como el VB6.
             HoraTransaccion = OperacionesCajaLegacy.AhoraLocal(),
-            MontoMaximo = dto.MontoMaximo
+            MontoMaximo = dto.CapitalPrestado
         });
     }
 
-    public void AddDetalle(CrearEmpenioDetalleDto detalle, string codigoEmpresa, int codigoGrupo, string numeroContrato, int secuencia, int codigoCategoriaPrenda, int? controlReloj)
+    public void AddDetalle(CrearEmpenioDetalleDto detalle, string codigoEmpresa, int codigoGrupo, string numeroContrato, int secuencia)
     {
         _dbContext.DetallesContratos.Add(new DetalleContratoDb
         {
@@ -120,15 +149,17 @@ public sealed class LegacyEmpenioRepository : ILegacyEmpenioRepository
             Descripcion = string.IsNullOrWhiteSpace(detalle.Descripcion) ? null : detalle.Descripcion.Trim(),
             Kilates = detalle.Kilataje,
             Peso = detalle.Peso,
-            CodigoReloj = controlReloj,
-            CantidadProducto = detalle.Cantidad ?? 1,
-            CodigoCategoriaPrenda = codigoCategoriaPrenda
+            // El VB6 guarda 0 en todos los detalles.
+            CodigoReloj = 0,
+            CantidadProducto = detalle.Cantidad,
+            CodigoCategoriaPrenda = detalle.CodigoTipoPrenda
         });
     }
 
     public async Task AgregarMovimientoCajaAsync(CrearEmpenioContratoDto dto, string codigoTransaccion, CancellationToken cancellationToken)
     {
-        // Igual que el VB6: número de SEC_CAJA, fecha sin hora, hora sobre el 1900-01-01 y motivo 'NULL'.
+        // Igual que el VB6: número de SEC_CAJA, fecha de la sesión (la del contrato), hora sobre
+        // el 1900-01-01 y motivo 'NULL'.
         await OperacionesCajaLegacy.AgregarMovimientoAsync(
             _dbContext,
             dto.CodigoEmpresa.Trim(),

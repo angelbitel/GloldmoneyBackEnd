@@ -2,44 +2,27 @@ using MediatR;
 
 namespace GoldmoneyBackend.Application.Empenios.Commands.CreateContrato;
 
+/// <summary>
+/// Empeño nuevo. Solo trae lo que decide el cajero; número, fechas, tasa, plazo e interés los
+/// calcula el backend con la sesión abierta y el grupo, como el VB6.
+/// </summary>
+/// <param name="Nombre">Datos del cliente: solo se usan si el cliente aún no existe en CLIENTES.</param>
 public sealed record CreateContratoCommand(
     string CodigoEmpresa,
     int CodigoGrupo,
-    string NumeroContrato,
     string IdCliente,
-    string Serie,
-    DateTime FechaCreacion,
-    decimal CapitalPrestado,
-    decimal Interes,
-    decimal SaldoActual,
-    decimal Mensualidad,
-    string? Observacion,
-    DateTime UltimaFechaPago,
-    decimal SaldoCapital,
-    DateTime FechaVencimiento,
-    int PlazoPago,
-    string Nombre,
-    string Apellido,
+    string? Nombre,
+    string? Apellido,
     string? Direccion,
     string? Telefono,
-    decimal MontoMaximo,
-    string UsuarioResponsable,
-    string CodigoPais,
-    string ProcesoKey,
-    decimal? MontoMinimoEmpenio,
-    bool? ControlaCajaPorUsuario,
-    bool? ConfirmadoPorUsuario,
-    int? TrabajoConKilates,
-    int? ControlReloj,
-    string? TipoTransaccion,
-    IReadOnlyList<CreateContratoDetalleCommand>? Detalles) : IRequest<CreateContratoResultDto>;
+    string? CodigoPais,
+    decimal CapitalPrestado,
+    IReadOnlyList<CreateContratoDetalleCommand> Detalles,
+    string UsuarioResponsable) : IRequest<CreateContratoResultDto>;
 
 public sealed record CreateContratoDetalleCommand(
     int CodigoTipoPrenda,
     string? Descripcion,
-    decimal? Peso,
-    decimal? Kilataje,
-    int? Cantidad,
-    decimal? MontoAvaluo,
-    decimal? MontoPrestamoDetalle,
-    string? Observacion);
+    decimal Peso,
+    decimal Kilataje,
+    int Cantidad);

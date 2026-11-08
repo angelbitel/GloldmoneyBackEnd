@@ -37,6 +37,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Server=db,1433;Database=db_a6b594_sade;User Id=sa;Password=${SA_PASSWORD:?SA_PASSWORD is required};TrustServerCertificate=True;Encrypt=False;
       Jwt__Key: ${JWT_KEY:?JWT_KEY is required}
+      Contrasenas__Pepper: ${PASSWORD_PEPPER:-}
       Jwt__Issuer: ${JWT_ISSUER:-GoldmoneyBackend}
       Jwt__Audience: ${JWT_AUDIENCE:-GoldmoneyBackendClients}
       Jwt__ExpiresMinutes: ${JWT_EXPIRES_MINUTES:-60}

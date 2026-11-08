@@ -1,9 +1,10 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Pagos;
+using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Application.Pagos.Commands.RegistrarAbonos;
+using GoldmoneyBackend.Application.Pagos.Commands.RegistrarFormaPago;
 using GoldmoneyBackend.Application.Pagos.Commands.RegistrarRetiros;
+using GoldmoneyBackend.Application.Pagos.Queries.GetCobro;
 using GoldmoneyBackend.Application.Pagos.Queries.GetConfiguracionCobro;
 using GoldmoneyBackend.Application.Pagos.Queries.GetContratosCobro;
 using GoldmoneyBackend.Application.Pagos.Queries.GetPagosPendientes;
@@ -59,7 +60,7 @@ public sealed class PagosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> RegistrarAbonos([FromBody] RegistrarAbonosRequest request, CancellationToken cancellationToken)
     {
-        if (UsuarioResponsable() is not { } usuarioResponsable)
+        if (User.UsuarioResponsable() is not { } usuarioResponsable)
         {
             return Unauthorized();
         }
@@ -82,7 +83,7 @@ public sealed class PagosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> RegistrarRetiros([FromBody] RegistrarRetirosRequest request, CancellationToken cancellationToken)
     {
-        if (UsuarioResponsable() is not { } usuarioResponsable)
+        if (User.UsuarioResponsable() is not { } usuarioResponsable)
         {
             return Unauthorized();
         }
@@ -106,13 +107,41 @@ public sealed class PagosController : ControllerBase
         return Ok(configuracion);
     }
 
-    private string? UsuarioResponsable()
+    /// <summary>
+    /// Registra la forma de pago de un cobro ya grabado, con los recibos que cubre. El VB6 no
+    /// guarda la forma de pago: queda solo en las tablas Cobros* del sistema nuevo.
+    /// </summary>
+    [HttpPost("cobros")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(typeof(CobroDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RegistrarFormaPago([FromBody] RegistrarFormaPagoRequest request, CancellationToken cancellationToken)
     {
-        var usuario = User.FindFirstValue(JwtRegisteredClaimNames.UniqueName)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue(ClaimTypes.Name);
+        if (User.UsuarioResponsable() is not { } usuarioResponsable)
+        {
+            return Unauthorized();
+        }
 
-        return string.IsNullOrWhiteSpace(usuario) ? null : usuario;
+        var command = new RegistrarFormaPagoCommand(
+            request.IdCliente,
+            (request.Metodos ?? []).Select(m => new MetodoPagoCobroDto(m.Metodo, m.Monto)).ToList(),
+            (request.Documentos ?? [])
+                .Select(d => new DocumentoCobroDto(d.Tipo, d.CodigoEmpresa, d.CodigoGrupo, d.NumeroContrato, d.NumeroRecibo, d.Total))
+                .ToList(),
+            usuarioResponsable);
+
+        var cobro = await _mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GetCobro), new { id = cobro.Id }, cobro);
+    }
+
+    [HttpGet("cobros/{id:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
+    [ProducesResponseType(typeof(CobroDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCobro(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send(new GetCobroQuery(id), cancellationToken));
     }
 
     /// <summary>Devuelve únicamente el valor total a pagar de un contrato.</summary>

@@ -1,5 +1,6 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Domain.Common;
+using GoldmoneyBackend.Infrastructure.Authentication;
 using GoldmoneyBackend.Infrastructure.Persistence.Cuentas;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +11,13 @@ public sealed class CuentasUsuarioService : ICuentasUsuarioService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly LegacyDataDbContext _legacyDbContext;
+    private readonly HasherContrasenas _hasher;
 
-    public CuentasUsuarioService(ApplicationDbContext dbContext, LegacyDataDbContext legacyDbContext)
+    public CuentasUsuarioService(ApplicationDbContext dbContext, LegacyDataDbContext legacyDbContext, HasherContrasenas hasher)
     {
         _dbContext = dbContext;
         _legacyDbContext = legacyDbContext;
+        _hasher = hasher;
     }
 
     public async Task<IReadOnlyDictionary<string, string>> GetCorreosAsync(CancellationToken cancellationToken)
@@ -136,18 +139,58 @@ public sealed class CuentasUsuarioService : ICuentasUsuarioService
             return false;
         }
 
-        // Se guarda en el mismo formato que usa el VB6 (texto, máx. 25), en todos los módulos
-        // del usuario, para que la contraseña nueva sirva en ambos sistemas.
-        var filas = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"UPDATE USUARIOS SET contrasena = {nuevaContrasena} WHERE nombre_usuario = {solicitud.NombreUsuario}",
-            cancellationToken);
-        if (filas == 0)
+        // Si el usuario se eliminó en el VB6 después de pedir el enlace, ya no hay cuenta que restablecer.
+        if (!await UsuarioExisteAsync(solicitud.NombreUsuario, cancellationToken))
         {
             await transaccion.RollbackAsync(cancellationToken);
             return false;
         }
 
+        await GuardarCredencialAsync(solicitud.NombreUsuario.Trim(), nuevaContrasena, ahoraUtc, cancellationToken);
+
         await transaccion.CommitAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<bool> CambiarContrasenaAsync(string nombreUsuario, string nuevaContrasena, DateTime ahoraUtc, CancellationToken cancellationToken)
+    {
+        var nombre = nombreUsuario.Trim();
+        if (!await UsuarioExisteAsync(nombre, cancellationToken))
+        {
+            return false;
+        }
+
+        await using var transaccion = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        await GuardarCredencialAsync(nombre, nuevaContrasena, ahoraUtc, cancellationToken);
+
+        // Un enlace pedido antes del cambio ya no debe poder sobrescribir la contraseña nueva.
+        await _dbContext.RestablecimientosContrasena
+            .Where(x => x.NombreUsuario == nombre && x.UsadoEnUtc == null && x.ExpiraEnUtc > ahoraUtc)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ExpiraEnUtc, ahoraUtc), cancellationToken);
+
+        await transaccion.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>
+    /// Guarda el hash en UsuariosCredencial. USUARIOS.contrasena no se toca: usa el cifrado del VB6,
+    /// que sigue leyéndola, y no admite otro formato.
+    /// </summary>
+    private async Task GuardarCredencialAsync(string nombreUsuario, string contrasena, DateTime ahoraUtc, CancellationToken cancellationToken)
+    {
+        var hash = _hasher.Hash(contrasena);
+        var existente = await _dbContext.UsuariosCredencial.FirstOrDefaultAsync(x => x.NombreUsuario == nombreUsuario, cancellationToken);
+        if (existente is null)
+        {
+            _dbContext.UsuariosCredencial.Add(new CredencialUsuario { NombreUsuario = nombreUsuario, Hash = hash, ActualizadoEnUtc = ahoraUtc });
+        }
+        else
+        {
+            existente.Hash = hash;
+            existente.ActualizadoEnUtc = ahoraUtc;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

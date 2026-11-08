@@ -70,6 +70,141 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
                     b.ToTable("ClientesBackend", (string)null);
                 });
 
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdCliente")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(14)");
+
+                    b.Property<decimal>("TotalDocumentos")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalMetodos")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaUtc");
+
+                    b.HasIndex("IdCliente");
+
+                    b.ToTable("Cobros", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroDocumento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("CobroId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CodigoEmpresa")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<int>("CodigoGrupo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NumeroContrato")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("NumeroRecibo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CobroId");
+
+                    b.HasIndex("CodigoEmpresa", "Tipo", "NumeroRecibo")
+                        .IsUnique();
+
+                    b.ToTable("CobrosDocumento", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroMetodoPago", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("CobroId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Metodo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CobroId", "Metodo")
+                        .IsUnique();
+
+                    b.ToTable("CobrosMetodoPago", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cuentas.CredencialUsuario", b =>
+                {
+                    b.Property<string>("NombreUsuario")
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime>("ActualizadoEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(256)");
+
+                    b.HasKey("NombreUsuario");
+
+                    b.ToTable("UsuariosCredencial", (string)null);
+                });
+
             modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cuentas.RestablecimientoContrasena", b =>
                 {
                     b.Property<Guid>("Id")
@@ -129,6 +264,31 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("UsuariosCorreo", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroDocumento", b =>
+                {
+                    b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", null)
+                        .WithMany("Documentos")
+                        .HasForeignKey("CobroId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroMetodoPago", b =>
+                {
+                    b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", null)
+                        .WithMany("Metodos")
+                        .HasForeignKey("CobroId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", b =>
+                {
+                    b.Navigation("Documentos");
+
+                    b.Navigation("Metodos");
                 });
 #pragma warning restore 612, 618
         }

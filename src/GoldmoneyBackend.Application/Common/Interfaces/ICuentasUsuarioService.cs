@@ -24,10 +24,17 @@ public interface ICuentasUsuarioService
     Task RegistrarSolicitudAsync(string nombreUsuario, string tokenHash, DateTime creadoEnUtc, DateTime expiraEnUtc, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Marca el enlace como usado y cambia la contraseña en USUARIOS, en una sola transacción.
-    /// Devuelve false si el enlace no existe, ya se usó o venció.
+    /// Marca el enlace como usado y guarda la contraseña del sistema nuevo, en una sola transacción.
+    /// Devuelve false si el enlace no existe, ya se usó, venció o el usuario ya no existe.
+    /// La contraseña del VB6 (USUARIOS.contrasena) no cambia.
     /// </summary>
     Task<bool> RestablecerContrasenaAsync(string tokenHash, string nuevaContrasena, DateTime ahoraUtc, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Guarda la contraseña del sistema nuevo del usuario e invalida sus enlaces de restablecimiento
+    /// pendientes. Devuelve false si el usuario no existe. La contraseña del VB6 no cambia.
+    /// </summary>
+    Task<bool> CambiarContrasenaAsync(string nombreUsuario, string nuevaContrasena, DateTime ahoraUtc, CancellationToken cancellationToken);
 }
 
 public sealed record UsuarioCorreoDto(string NombreUsuario, string Correo);

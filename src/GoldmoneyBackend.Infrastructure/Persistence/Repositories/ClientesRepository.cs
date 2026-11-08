@@ -163,6 +163,15 @@ public sealed class ClientesRepository : IClientesRepository
         }
     }
 
+    public async Task<bool> ActualizarComentarioAsync(string idCliente, string? comentario, CancellationToken cancellationToken)
+    {
+        var filas = await _dbContext.Clientes
+            .Where(x => x.IdCliente == idCliente)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Comentario, comentario), cancellationToken);
+
+        return filas > 0;
+    }
+
     private static string? TrimOrNull(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

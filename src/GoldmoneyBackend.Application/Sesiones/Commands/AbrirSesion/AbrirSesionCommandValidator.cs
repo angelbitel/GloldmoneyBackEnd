@@ -10,9 +10,6 @@ public sealed class AbrirSesionCommandValidator : AbstractValidator<AbrirSesionC
             .NotEmpty()
             .MaximumLength(2);
 
-        RuleFor(x => x.FechaApertura)
-            .NotEmpty();
-
         RuleFor(x => x.UsuarioResponsable)
             .NotEmpty()
             .MaximumLength(14);

@@ -2,55 +2,37 @@ using FluentValidation;
 
 namespace GoldmoneyBackend.Application.Empenios.Commands.CreateContrato;
 
+/// <summary>Tamaños según las columnas de CONTRATOS, CLIENTES y DETALLES_CONTRATOS.</summary>
 public sealed class CreateContratoCommandValidator : AbstractValidator<CreateContratoCommand>
 {
     public CreateContratoCommandValidator()
     {
-        RuleFor(x => x.ProcesoKey)
-            .NotEmpty().WithMessage("Estimado usuario, no se ha indicado un tipo de proceso valido.");
-
-        RuleFor(x => x.CodigoEmpresa)
-            .NotEmpty().WithMessage("Estimado usuario, no ha seleccionado una empresa sobre la cual grabar los datos en pantalla.");
-
-        RuleFor(x => x.IdCliente)
-            .NotEmpty().When(x => x.ProcesoKey != "PagosContratos")
-            .WithMessage("Estimado usuario, la identificacion del cliente o ID no es valido dentro del sistema.");
-
-        RuleFor(x => x.FechaCreacion)
-            .NotEmpty().WithMessage("Estimado usuario, la fecha con que se dispone grabar la transaccion no es valida dentro del sistema.")
-            .Must(f => f.Year >= 1000).WithMessage("Estimado usuario, el ano introducido no puede contener menos de cuatro digitos.");
-
-        RuleFor(x => x.CodigoGrupo)
-            .GreaterThan(0).WithMessage("Estimado usuario, no ha seleccionado un grupo clasificatorio para el nuevo contrato a ingresar.");
+        RuleFor(x => x.CodigoEmpresa).NotEmpty().MaximumLength(2);
+        RuleFor(x => x.CodigoGrupo).GreaterThan(0);
+        RuleFor(x => x.IdCliente).NotEmpty().MaximumLength(14);
+        RuleFor(x => x.Nombre).MaximumLength(20);
+        RuleFor(x => x.Apellido).MaximumLength(20);
+        RuleFor(x => x.Direccion).MaximumLength(40);
+        RuleFor(x => x.Telefono).MaximumLength(20);
+        RuleFor(x => x.CodigoPais).MaximumLength(5);
+        RuleFor(x => x.UsuarioResponsable).NotEmpty().MaximumLength(14);
 
         RuleFor(x => x.CapitalPrestado)
-            .GreaterThan(0).WithMessage("Estimado usuario, no ha ingresado el monto para el nuevo contrato.");
-
-        RuleFor(x => x.SaldoCapital)
-            .GreaterThan(0).WithMessage("Estimado usuario, el saldo a capital del nuevo contrato debe ser mayor que cero.");
-
-        RuleFor(x => x.NumeroContrato)
-            .NotEmpty().WithMessage("Estimado usuario, no ha ingresado un numero de contrato valido para el contrato a ingresar.");
-
-        RuleFor(x => x.Serie)
-            .NotEmpty().WithMessage("Estimado usuario, no ha ingresado una serie valida para el contrato a ingresar.")
-            .Must(s => s.Trim().Length >= 10 && s.Trim().Length <= 20)
-            .WithMessage("Estimado usuario, verifique el numero de Contrato, ya que no cumple con el formato establecido para efectuar el empenio.");
-
-        RuleFor(x => x.Nombre)
-            .NotEmpty().WithMessage("No existe un nombre en pantalla para salvar en presente contrato.");
-
-        RuleFor(x => x.Apellido)
-            .NotEmpty().WithMessage("No existe un apellido en pantalla para salvar en presente contrato.");
-
-        RuleFor(x => x.UsuarioResponsable)
-            .NotEmpty().WithMessage("Estimado usuario, no se ha indicado un usuario responsable para la transaccion.");
-
-        RuleFor(x => x.CodigoPais)
-            .NotEmpty().WithMessage("Estimado usuario, no se ha indicado un codigo de pais valido para el cliente.");
+            .GreaterThan(0)
+            .PrecisionScale(15, 2, true);
 
         RuleFor(x => x.Detalles)
-            .NotNull().WithMessage("Estimado usuario, debe ingresar al menos un detalle para el nuevo contrato.")
-            .Must(d => d!.Count > 0).WithMessage("Estimado usuario, debe ingresar al menos un detalle para el nuevo contrato.");
+            .NotEmpty()
+            .WithMessage("Estimado usuario, debe ingresar al menos un detalle para el nuevo contrato.");
+
+        RuleForEach(x => x.Detalles).ChildRules(detalle =>
+        {
+            detalle.RuleFor(x => x.CodigoTipoPrenda).GreaterThan(0)
+                .WithMessage("Estimado usuario, cada detalle debe contener un codigo de tipo de prenda valido.");
+            detalle.RuleFor(x => x.Descripcion).MaximumLength(300);
+            detalle.RuleFor(x => x.Peso).GreaterThanOrEqualTo(0).PrecisionScale(6, 2, true);
+            detalle.RuleFor(x => x.Kilataje).GreaterThanOrEqualTo(0).PrecisionScale(2, 0, true);
+            detalle.RuleFor(x => x.Cantidad).GreaterThan(0);
+        });
     }
 }

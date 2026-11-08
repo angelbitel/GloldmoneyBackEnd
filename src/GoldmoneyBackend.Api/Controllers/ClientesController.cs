@@ -1,4 +1,6 @@
 using GoldmoneyBackend.Api.Authorization;
+using GoldmoneyBackend.Api.Contracts.ClientesDb;
+using GoldmoneyBackend.Application.Clientes.Commands.ActualizarComentarioCliente;
 using GoldmoneyBackend.Application.Clientes.Commands.CreateCliente;
 using GoldmoneyBackend.Application.Clientes.Commands.DeleteCliente;
 using GoldmoneyBackend.Application.Clientes.Commands.UpdateCliente;
@@ -69,6 +71,18 @@ public sealed class ClientesController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new DeleteClienteCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Guarda la nota del cliente (CLIENTES.comentario, compartida con el VB6). Vacía la borra.</summary>
+    [HttpPut("{idCliente}/comentario")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ActualizarComentario(string idCliente, [FromBody] ActualizarComentarioClienteRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ActualizarComentarioClienteCommand(idCliente, request.Comentario), cancellationToken);
         return NoContent();
     }
 }

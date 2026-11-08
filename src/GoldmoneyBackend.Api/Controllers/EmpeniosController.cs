@@ -55,6 +55,10 @@ public sealed class EmpeniosController : ControllerBase
         return Ok(contratos);
     }
 
+    /// <summary>
+    /// Número que probablemente tendrá el próximo contrato del grupo, solo para mostrarlo; no
+    /// reserva nada. El número definitivo lo asigna <see cref="CreateContrato"/>.
+    /// </summary>
     [HttpGet("contratos/proximo/{codigoEmpresa}/{codigoGrupo:int}")]
     [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
     [ProducesResponseType(typeof(ProximoContratoDto), StatusCodes.Status200OK)]
@@ -64,12 +68,23 @@ public sealed class EmpeniosController : ControllerBase
         return Ok(proximo);
     }
 
+    /// <summary>
+    /// Crea el empeño con la fecha de la sesión abierta, la tasa y el plazo del grupo y el
+    /// siguiente número de su secuencia. Devuelve el número y las fechas para imprimir el contrato.
+    /// </summary>
     [HttpPost("contratos")]
     [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
     [ProducesResponseType(typeof(CreateContratoResultDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CreateContrato([FromBody] CreateEmpenioContratoRequest request, CancellationToken cancellationToken)
     {
-        var command = request.ToCommand();
+        if (User.UsuarioResponsable() is not { } usuarioResponsable)
+        {
+            return Unauthorized();
+        }
+
+        var command = request.ToCommand(usuarioResponsable);
         var created = await _mediator.Send(command, cancellationToken);
 
         return CreatedAtAction(nameof(GetContratoById), new { id = created.ContratoId }, created);

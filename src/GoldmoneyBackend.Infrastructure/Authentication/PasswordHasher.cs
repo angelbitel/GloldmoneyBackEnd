@@ -11,12 +11,6 @@ internal static class PasswordHasher
     private const int SaltSize = 16;
     private const int HashSize = 32;
 
-    public static bool IsPbkdf2Hash(string value)
-    {
-        return !string.IsNullOrWhiteSpace(value)
-            && value.StartsWith(Prefix + "$", StringComparison.OrdinalIgnoreCase);
-    }
-
     public static string Hash(string password)
     {
         var salt = new byte[SaltSize];

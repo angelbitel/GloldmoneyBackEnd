@@ -1,12 +1,14 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
+using GoldmoneyBackend.Domain.Empenios;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
-using GoldmoneyBackend.Infrastructure.Persistence.Legacy.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
 public sealed class ContratoNumeracionRepository : IContratoNumeracionRepository
 {
+    private const int MaxIntentos = 1000;
+
     private readonly LegacyDataDbContext _dbContext;
 
     public ContratoNumeracionRepository(LegacyDataDbContext dbContext)
@@ -14,32 +16,39 @@ public sealed class ContratoNumeracionRepository : IContratoNumeracionRepository
         _dbContext = dbContext;
     }
 
+    /// <summary>
+    /// Número que probablemente recibirá el próximo contrato del grupo, solo para mostrarlo.
+    /// No toca SECUENCIAS_EMPRESA: el número definitivo se reserva al guardar el contrato,
+    /// y puede ser otro si mientras tanto el VB6 u otro cajero creó un contrato.
+    /// </summary>
     public async Task<ProximoContratoDto> GetProximoAsync(string codigoEmpresa, int codigoGrupo, CancellationToken cancellationToken)
     {
         var empresa = codigoEmpresa.Trim();
 
-        // Obtener la abreviatura del grupo desde GRUPOS para usarla como CodigoSecuencia en SECUENCIAS_EMPRESA
-        var grupo = await _dbContext.Grupos
+        // La abreviatura del grupo es el código de su secuencia en SECUENCIAS_EMPRESA.
+        var abreviatura = await _dbContext.Grupos
             .AsNoTracking()
             .Where(x => x.CodigoEmpresa == empresa && x.CodigoGrupo == codigoGrupo)
-            .Select(x => new { x.AbreviaturaGrupo })
+            .Select(x => x.AbreviaturaGrupo)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (grupo is null || string.IsNullOrWhiteSpace(grupo.AbreviaturaGrupo))
+        if (string.IsNullOrWhiteSpace(abreviatura))
             throw new InvalidOperationException(
                 $"No se encontró el grupo {codigoGrupo} para la empresa '{empresa}' o no tiene abreviatura definida.");
 
-        var abreviatura = grupo.AbreviaturaGrupo.Trim();
+        var codigoSecuencia = abreviatura.Trim();
+        var actual = await _dbContext.SecuenciasEmpresa
+            .AsNoTracking()
+            .Where(x => x.CodigoEmpresa == empresa && x.CodigoSecuencia == codigoSecuencia)
+            .Select(x => (int?)x.SecuenciaActual)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        // Obtener el siguiente número desde SECUENCIAS_EMPRESA usando la abreviatura del grupo como CodigoSecuencia
-        var proximoNumero = await ObtenerProximaSecuenciaAsync(empresa, abreviatura, cancellationToken);
+        // Igual que al guardar: la secuencia se incrementa y se usa el nuevo valor.
+        var secuencia = (actual ?? 0) + 1;
 
-        // Buscar el siguiente número disponible que no exista ya en la base de datos
-        const int maxAttempts = 1000;
-        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        for (var intento = 0; intento < MaxIntentos; intento++, secuencia++)
         {
-            var serie = proximoNumero.ToString("D10");
-            var numeroContrato = empresa + codigoGrupo.ToString() + serie;
+            var (numeroContrato, serie) = CalculoEmpenio.Numerar(empresa, codigoGrupo, secuencia);
 
             var existe = await _dbContext.Contratos
                 .AsNoTracking()
@@ -51,35 +60,10 @@ public sealed class ContratoNumeracionRepository : IContratoNumeracionRepository
             {
                 return new ProximoContratoDto(numeroContrato, serie);
             }
-
-            proximoNumero++;
         }
 
         throw new InvalidOperationException(
-            $"No se pudo encontrar un número de contrato disponible después de {maxAttempts} intentos " +
+            $"No se pudo encontrar un número de contrato disponible después de {MaxIntentos} intentos " +
             $"para la empresa '{empresa}' y grupo {codigoGrupo}.");
-    }
-
-    private async Task<int> ObtenerProximaSecuenciaAsync(string empresa, string codigoSecuencia, CancellationToken cancellationToken)
-    {
-        var secuencia = await _dbContext.SecuenciasEmpresa
-            .FirstOrDefaultAsync(x => x.CodigoEmpresa == empresa && x.CodigoSecuencia == codigoSecuencia, cancellationToken);
-
-        if (secuencia is null)
-        {
-            secuencia = new SecuenciaEmpresaDb
-            {
-                CodigoEmpresa = empresa,
-                CodigoSecuencia = codigoSecuencia,
-                SecuenciaActual = 1
-            };
-            _dbContext.SecuenciasEmpresa.Add(secuencia);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            return 1;
-        }
-
-        secuencia.SecuenciaActual++;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return secuencia.SecuenciaActual;
     }
 }

@@ -19,7 +19,14 @@ public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
         CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
-        _logger.LogInformation("Handling request {RequestName} with payload {@Request}", requestName, request);
+        if (request is IRequestConDatosSensibles)
+        {
+            _logger.LogInformation("Handling request {RequestName}", requestName);
+        }
+        else
+        {
+            _logger.LogInformation("Handling request {RequestName} with payload {@Request}", requestName, request);
+        }
 
         var response = await next();
 
