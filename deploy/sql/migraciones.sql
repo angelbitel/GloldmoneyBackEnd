@@ -279,3 +279,33 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261108090510_AgregarPinUsuarios'
+)
+BEGIN
+    CREATE TABLE [UsuariosPin] (
+        [NombreUsuario] varchar(15) NOT NULL,
+        [PinHash] varchar(256) NOT NULL,
+        [ActualizadoEnUtc] datetime2 NOT NULL,
+        CONSTRAINT [PK_UsuariosPin] PRIMARY KEY ([NombreUsuario])
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261108090510_AgregarPinUsuarios'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261108090510_AgregarPinUsuarios', N'8.0.8');
+END;
+GO
+
+COMMIT;
+GO
+

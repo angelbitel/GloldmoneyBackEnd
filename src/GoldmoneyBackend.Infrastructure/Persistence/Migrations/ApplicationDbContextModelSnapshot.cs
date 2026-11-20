@@ -266,6 +266,27 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
                     b.ToTable("UsuariosCorreo", (string)null);
                 });
 
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cuentas.UsuarioPin", b =>
+                {
+                    b.Property<string>("NombreUsuario")
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime>("ActualizadoEnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PinHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(256)");
+
+                    b.HasKey("NombreUsuario");
+
+                    b.ToTable("UsuariosPin", (string)null);
+                });
+
             modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroDocumento", b =>
                 {
                     b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", null)

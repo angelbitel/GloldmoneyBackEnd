@@ -12,4 +12,5 @@ public sealed record UsuarioDbDto(
     int? EfectuarAnulacion,
     int? AccesoCashDrawer,
     int? UsuarioSoporte,
-    string? Correo = null);
+    string? Correo = null,
+    bool TienePin = false);

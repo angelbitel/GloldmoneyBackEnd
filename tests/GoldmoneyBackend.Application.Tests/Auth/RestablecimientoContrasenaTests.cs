@@ -185,5 +185,8 @@ public sealed class RestablecimientoContrasenaTests
         public Task<IReadOnlyDictionary<string, string>> GetCorreosAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> UsuarioExisteAsync(string nombreUsuario, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task GuardarCorreoAsync(string nombreUsuario, string? correo, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlySet<string>> GetUsuariosConPinAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<bool> GuardarPinAsync(string nombreUsuario, string pin, DateTime ahoraUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ResultadoPin> VerificarPinAsync(string nombreUsuario, string pin, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

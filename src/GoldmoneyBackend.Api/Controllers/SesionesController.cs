@@ -6,6 +6,7 @@ using GoldmoneyBackend.Application.Sesiones.Queries.GetEstadoSesiones;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GoldmoneyBackend.Api.Controllers;
 
@@ -30,12 +31,16 @@ public sealed class SesionesController : ControllerBase
     }
 
     /// <summary>
-    /// Abre la caja de la empresa para hoy (fecha local), como el VB6. Responde 409 si la empresa
-    /// ya tiene una caja abierta o ya tuvo sesión hoy.
+    /// Abre la caja de la empresa para hoy (fecha local), como el VB6, con el PIN del usuario.
+    /// Responde 400 si el PIN falta o no es correcto, 409 si la empresa ya tiene una caja abierta
+    /// o ya tuvo sesión hoy y 429 tras varios intentos seguidos.
     /// </summary>
     [HttpPost("abrir")]
+    [EnableRateLimiting(RateLimitPolicies.VerificacionPin)]
     [ProducesResponseType(typeof(SesionAbiertaDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Abrir([FromBody] AbrirSesionRequest request, CancellationToken cancellationToken)
     {
         if (User.UsuarioResponsable() is not { } usuarioResponsable)
@@ -43,7 +48,7 @@ public sealed class SesionesController : ControllerBase
             return Unauthorized();
         }
 
-        var command = new AbrirSesionCommand(request.CodigoEmpresa, usuarioResponsable);
+        var command = new AbrirSesionCommand(request.CodigoEmpresa, usuarioResponsable, request.Pin ?? string.Empty);
         var sesion = await _mediator.Send(command, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, sesion);
     }

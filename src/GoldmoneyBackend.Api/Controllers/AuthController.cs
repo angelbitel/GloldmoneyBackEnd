@@ -1,5 +1,6 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Auth;
+using GoldmoneyBackend.Application.Auth.Commands.CambiarMiPin;
 using GoldmoneyBackend.Application.Auth.Commands.Login;
 using GoldmoneyBackend.Application.Auth.Commands.RestablecerContrasena;
 using GoldmoneyBackend.Application.Auth.Commands.SolicitarRestablecimientoContrasena;
@@ -66,5 +67,23 @@ public sealed class AuthController : ControllerBase
     {
         var usuarios = await _mediator.Send(new GetUsuariosQuery(), cancellationToken);
         return Ok(usuarios);
+    }
+
+    /// <summary>El usuario conectado define su PIN (para abrir caja), confirmando con su contraseña.</summary>
+    [Authorize(Policy = AuthorizationPolicies.Backoffice)]
+    [EnableRateLimiting(RateLimitPolicies.VerificacionPin)]
+    [HttpPut("mi-pin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CambiarMiPin([FromBody] CambiarMiPinRequest request, CancellationToken cancellationToken)
+    {
+        if (User.UsuarioResponsable() is not { } usuario)
+        {
+            return Unauthorized();
+        }
+
+        await _mediator.Send(new CambiarMiPinCommand(usuario, request.Contrasena, request.Pin), cancellationToken);
+        return NoContent();
     }
 }

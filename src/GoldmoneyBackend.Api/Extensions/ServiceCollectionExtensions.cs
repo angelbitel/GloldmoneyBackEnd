@@ -95,6 +95,17 @@ public static class ServiceCollectionExtensions
                         Window = TimeSpan.FromMinutes(15),
                         QueueLimit = 0
                     }));
+
+            // El PIN es corto: pocos intentos por usuario para que no se pueda adivinar probando.
+            options.AddPolicy(RateLimitPolicies.VerificacionPin, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.UsuarioResponsable()?.ToLowerInvariant() ?? "anonimo",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(5),
+                        QueueLimit = 0
+                    }));
         });
 
         return services;

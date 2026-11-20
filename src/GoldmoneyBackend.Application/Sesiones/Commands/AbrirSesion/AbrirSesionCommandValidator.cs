@@ -13,5 +13,9 @@ public sealed class AbrirSesionCommandValidator : AbstractValidator<AbrirSesionC
         RuleFor(x => x.UsuarioResponsable)
             .NotEmpty()
             .MaximumLength(14);
+
+        RuleFor(x => x.Pin)
+            .NotEmpty()
+            .WithMessage("Ingrese su PIN para abrir la caja.");
     }
 }

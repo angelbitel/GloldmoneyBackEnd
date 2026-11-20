@@ -86,8 +86,9 @@ if (hasHttpsEndpoint && !app.Environment.IsDevelopment())
 }
 
 app.UseCors(CorsPolicyName);
-app.UseRateLimiter();
 app.UseAuthentication();
+// Después de la autenticación: el límite de VerificacionPin se agrupa por usuario.
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapGet("/", () => Results.Ok(new { message = "Goldmoney Backend API is running", health = "/health", login = "/api/auth/login" }));
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));

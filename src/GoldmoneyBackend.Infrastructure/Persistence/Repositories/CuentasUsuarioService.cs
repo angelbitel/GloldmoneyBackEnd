@@ -1,9 +1,11 @@
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Domain.Common;
 using GoldmoneyBackend.Infrastructure.Authentication;
+using GoldmoneyBackend.Infrastructure.Authentication.Models;
 using GoldmoneyBackend.Infrastructure.Persistence.Cuentas;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
@@ -12,12 +14,80 @@ public sealed class CuentasUsuarioService : ICuentasUsuarioService
     private readonly ApplicationDbContext _dbContext;
     private readonly LegacyDataDbContext _legacyDbContext;
     private readonly HasherContrasenas _hasher;
+    private readonly AuthOptions _authOptions;
 
-    public CuentasUsuarioService(ApplicationDbContext dbContext, LegacyDataDbContext legacyDbContext, HasherContrasenas hasher)
+    public CuentasUsuarioService(
+        ApplicationDbContext dbContext,
+        LegacyDataDbContext legacyDbContext,
+        HasherContrasenas hasher,
+        IOptions<AuthOptions> authOptions)
     {
         _dbContext = dbContext;
         _legacyDbContext = legacyDbContext;
         _hasher = hasher;
+        _authOptions = authOptions.Value;
+    }
+
+    public async Task<IReadOnlySet<string>> GetUsuariosConPinAsync(CancellationToken cancellationToken)
+    {
+        var nombres = await _dbContext.UsuariosPin
+            .AsNoTracking()
+            .Select(x => x.NombreUsuario)
+            .ToListAsync(cancellationToken);
+
+        return nombres.Select(x => x.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task<bool> GuardarPinAsync(string nombreUsuario, string pin, DateTime ahoraUtc, CancellationToken cancellationToken)
+    {
+        var nombre = nombreUsuario.Trim();
+
+        // Los usuarios de respaldo de la configuración (p. ej. admin) no están en USUARIOS,
+        // pero también abren caja: pueden tener PIN.
+        var existe = _authOptions.Users.Any(u => string.Equals(u.UserName, nombre, StringComparison.OrdinalIgnoreCase))
+            || await UsuarioExisteAsync(nombre, cancellationToken);
+        if (!existe)
+        {
+            return false;
+        }
+
+        var hash = _hasher.Hash(pin);
+        var existente = await _dbContext.UsuariosPin.FirstOrDefaultAsync(x => x.NombreUsuario == nombre, cancellationToken);
+        if (existente is null)
+        {
+            _dbContext.UsuariosPin.Add(new UsuarioPin { NombreUsuario = nombre, PinHash = hash, ActualizadoEnUtc = ahoraUtc });
+        }
+        else
+        {
+            existente.PinHash = hash;
+            existente.ActualizadoEnUtc = ahoraUtc;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<ResultadoPin> VerificarPinAsync(string nombreUsuario, string pin, CancellationToken cancellationToken)
+    {
+        var nombre = nombreUsuario.Trim();
+        var registro = await _dbContext.UsuariosPin.FirstOrDefaultAsync(x => x.NombreUsuario == nombre, cancellationToken);
+        if (registro is null)
+        {
+            return ResultadoPin.SinPin;
+        }
+
+        if (!_hasher.Verificar(pin, registro.PinHash))
+        {
+            return ResultadoPin.Incorrecto;
+        }
+
+        if (_hasher.NecesitaRehacer(registro.PinHash))
+        {
+            registro.PinHash = _hasher.Hash(pin);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return ResultadoPin.Correcto;
     }
 
     public async Task<IReadOnlyDictionary<string, string>> GetCorreosAsync(CancellationToken cancellationToken)

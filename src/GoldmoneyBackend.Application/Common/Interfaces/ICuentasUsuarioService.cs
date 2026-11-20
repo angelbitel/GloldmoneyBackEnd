@@ -35,6 +35,25 @@ public interface ICuentasUsuarioService
     /// pendientes. Devuelve false si el usuario no existe. La contraseña del VB6 no cambia.
     /// </summary>
     Task<bool> CambiarContrasenaAsync(string nombreUsuario, string nuevaContrasena, DateTime ahoraUtc, CancellationToken cancellationToken);
+
+    /// <summary>Nombres de los usuarios que ya tienen PIN (sin distinguir mayúsculas).</summary>
+    Task<IReadOnlySet<string>> GetUsuariosConPinAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Guarda el PIN del usuario como hash. Devuelve false si el usuario no existe ni en USUARIOS
+    /// ni entre los usuarios de respaldo de la configuración.
+    /// </summary>
+    Task<bool> GuardarPinAsync(string nombreUsuario, string pin, DateTime ahoraUtc, CancellationToken cancellationToken);
+
+    Task<ResultadoPin> VerificarPinAsync(string nombreUsuario, string pin, CancellationToken cancellationToken);
+}
+
+public enum ResultadoPin
+{
+    /// <summary>El usuario no tiene PIN asignado.</summary>
+    SinPin,
+    Incorrecto,
+    Correcto
 }
 
 public sealed record UsuarioCorreoDto(string NombreUsuario, string Correo);

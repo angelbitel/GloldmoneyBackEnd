@@ -167,7 +167,8 @@ public sealed class UsuariosRepository : IUsuariosRepository
             x.EfectuarAnulacion,
             x.AccesoCashDrawer,
             x.UsuarioSoporte,
-            null);
+            null,
+            false);
     }
 
     private static void ValidateDto(UsuarioDbUpsertDto dto)

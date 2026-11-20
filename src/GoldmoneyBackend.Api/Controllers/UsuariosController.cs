@@ -1,6 +1,7 @@
 using GoldmoneyBackend.Api.Authorization;
 using GoldmoneyBackend.Api.Contracts.Usuarios;
 using GoldmoneyBackend.Application.Auth.Commands.ActualizarCorreoUsuario;
+using GoldmoneyBackend.Application.Auth.Commands.AsignarPinUsuario;
 using GoldmoneyBackend.Application.Auth.Commands.CambiarContrasenaUsuario;
 using GoldmoneyBackend.Application.Common.Interfaces;
 using MediatR;
@@ -34,8 +35,13 @@ public sealed class UsuariosController : ControllerBase
     {
         var usuarios = await _usuariosRepository.GetAllAsync(cancellationToken);
         var correos = await _cuentasUsuarioService.GetCorreosAsync(cancellationToken);
+        var conPin = await _cuentasUsuarioService.GetUsuariosConPinAsync(cancellationToken);
 
-        return Ok(usuarios.Select(u => u with { Correo = correos.GetValueOrDefault(u.NombreUsuario.Trim()) }));
+        return Ok(usuarios.Select(u => u with
+        {
+            Correo = correos.GetValueOrDefault(u.NombreUsuario.Trim()),
+            TienePin = conPin.Contains(u.NombreUsuario.Trim())
+        }));
     }
 
     /// <summary>
@@ -60,6 +66,17 @@ public sealed class UsuariosController : ControllerBase
     public async Task<IActionResult> CambiarContrasena(string nombreUsuario, [FromBody] CambiarContrasenaUsuarioRequest request, CancellationToken cancellationToken)
     {
         await _mediator.Send(new CambiarContrasenaUsuarioCommand(nombreUsuario, request.NuevaContrasena), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Asigna el PIN del usuario (para abrir caja), por ejemplo si lo olvidó.</summary>
+    [HttpPut("{nombreUsuario}/pin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AsignarPin(string nombreUsuario, [FromBody] AsignarPinUsuarioRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new AsignarPinUsuarioCommand(nombreUsuario, request.Pin), cancellationToken);
         return NoContent();
     }
 
