@@ -5,6 +5,9 @@ using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Application.Empenios.Commands.CreateContrato;
 using GoldmoneyBackend.Application.Empenios.Queries.GetContratoById;
 using GoldmoneyBackend.Application.Empenios.Queries.GetContratosByCedula;
+using GoldmoneyBackend.Application.Empenios.Transacciones;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -89,4 +92,62 @@ public sealed class EmpeniosController : ControllerBase
 
         return CreatedAtAction(nameof(GetContratoById), new { id = created.ContratoId }, created);
     }
+
+    // ---- Administración de empeño (SADE: observación, copia de recibo, anulación) ----
+
+    [HttpGet("clientes/{cedula}/contratos-transaccion")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesRead)]
+    [ProducesResponseType(typeof(IReadOnlyList<ContratoTransaccionDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetContratosTransaccion(string cedula, CancellationToken cancellationToken)
+    {
+        var contratos = await _mediator.Send(new GetContratosTransaccionQuery(cedula), cancellationToken);
+        return Ok(contratos);
+    }
+
+    [HttpPut("contratos/{codigoEmpresa}/{codigoGrupo:int}/{numeroContrato}/observacion")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ActualizarObservacion(
+        string codigoEmpresa, int codigoGrupo, string numeroContrato,
+        [FromBody] ActualizarObservacionRequest request, CancellationToken cancellationToken)
+    {
+        var clave = new ContratoClave(codigoEmpresa, codigoGrupo, numeroContrato);
+        var observacion = await _mediator.Send(new ActualizarObservacionCommand(clave, request.Observacion), cancellationToken);
+        return Ok(new { observacion });
+    }
+
+    [HttpPost("contratos/{codigoEmpresa}/{codigoGrupo:int}/{numeroContrato}/copia-recibo")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(typeof(CopiaReciboResultDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GenerarCopiaRecibo(
+        string codigoEmpresa, int codigoGrupo, string numeroContrato, CancellationToken cancellationToken)
+    {
+        var usuario = UsuarioActual();
+        if (usuario is null) return Unauthorized();
+
+        var clave = new ContratoClave(codigoEmpresa, codigoGrupo, numeroContrato);
+        var resultado = await _mediator.Send(new GenerarCopiaReciboCommand(clave, usuario), cancellationToken);
+        return Ok(resultado);
+    }
+
+    [HttpPost("contratos/{codigoEmpresa}/{codigoGrupo:int}/{numeroContrato}/anular")]
+    [Authorize(Policy = AuthorizationPolicies.ClientesWrite)]
+    [ProducesResponseType(typeof(AnularContratoResultDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> AnularContrato(
+        string codigoEmpresa, int codigoGrupo, string numeroContrato,
+        [FromBody] AnularContratoRequest? request, CancellationToken cancellationToken)
+    {
+        var usuario = UsuarioActual();
+        if (usuario is null) return Unauthorized();
+
+        var clave = new ContratoClave(codigoEmpresa, codigoGrupo, numeroContrato);
+        var command = new AnularContratoCommand(clave, usuario, request?.SupervisorUsuario, request?.SupervisorClave);
+        var resultado = await _mediator.Send(command, cancellationToken);
+        return Ok(resultado);
+    }
+
+    private string? UsuarioActual() =>
+        User.FindFirstValue(JwtRegisteredClaimNames.UniqueName)
+        ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User.FindFirstValue(ClaimTypes.Name);
 }

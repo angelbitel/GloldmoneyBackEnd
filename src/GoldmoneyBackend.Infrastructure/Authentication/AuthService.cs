@@ -116,9 +116,17 @@ public sealed class AuthService : IAuthService
         var configuredUser = _authOptions.Users.FirstOrDefault(u =>
             string.Equals(u.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
-        var roles = configuredUser?.Roles
+        var roles = (configuredUser?.Roles
             ?? _authOptions.RolesUsuarios.GetValueOrDefault(userName.Trim())
-            ?? ["Analyst"];
+            ?? ["Analyst"]).ToList();
+
+        // USUARIOS.usuario_admin = 1 (cuenta activa) => administrador: puede hacer todo en la app.
+        if (validationInDatabase == true
+            && !roles.Contains("Admin", StringComparer.OrdinalIgnoreCase)
+            && await EsUsuarioAdminAsync(userName, cancellationToken))
+        {
+            roles.Add("Admin");
+        }
 
         var nowUtc = DateTime.UtcNow;
         var expiresAtUtc = nowUtc.AddMinutes(_jwtOptions.ExpiresMinutes);
@@ -198,6 +206,21 @@ public sealed class AuthService : IAuthService
         }
 
         return true;
+    }
+
+    private async Task<bool> EsUsuarioAdminAsync(string userName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var nombre = userName.Trim();
+            return await _legacyDataDbContext.Usuarios
+                .AsNoTracking()
+                .AnyAsync(x => x.NombreUsuario == nombre && x.UsuarioAdmin == 1 && (x.StatusCuenta ?? 0) == 0, cancellationToken);
+        }
+        catch (DbException)
+        {
+            return false;
+        }
     }
 
     private async Task<bool?> TryValidateAgainstUsersTableAsync(string userName, string password, CancellationToken cancellationToken)

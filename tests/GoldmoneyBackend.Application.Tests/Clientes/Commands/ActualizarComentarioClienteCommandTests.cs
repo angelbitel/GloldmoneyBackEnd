@@ -55,7 +55,9 @@ public sealed class ActualizarComentarioClienteCommandTests
         }
 
         public Task<IReadOnlyList<ClienteDbDto>> GetAllAsync(string? search, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task UpdateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ClienteDbDto?> GetByIdAsync(string idCliente, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ClientesPaginadoDto> GetPaginadoAsync(string? buscar, FiltroClientes filtro, int pagina, int tamanoPagina, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ClienteDbDto> CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ClienteDbDto> UpdateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

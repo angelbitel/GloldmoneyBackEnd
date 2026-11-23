@@ -101,23 +101,25 @@ public sealed class EmpeniosReadService : IEmpeniosReadService
 
         if (contrato is null) return null;
 
-        var detalles = await _dbContext.DetallesContratos
-            .AsNoTracking()
-            .Where(d => d.CodigoEmpresa == contrato.CodigoEmpresa
-                && d.CodigoGrupo == contrato.CodigoGrupo
-                && d.NumeroContrato == contrato.NumeroContrato)
-            .OrderBy(d => d.SecuenciaContratos)
-            .Join(_dbContext.CategoriasPrenda.AsNoTracking(),
-                detalle => detalle.CodigoCategoriaPrenda,
-                categoria => categoria.CodigoCategoriaPrenda,
-                (detalle, categoria) => new ContratoDetalleDto(
-                    detalle.SecuenciaContratos,
-                    detalle.Descripcion,
-                    detalle.Kilates,
-                    detalle.Peso,
-                    detalle.CantidadProducto,
-                    detalle.CodigoCategoriaPrenda,
-                    categoria.NombreCategoriaPrenda))
+        // LEFT JOIN: los contratos antiguos tienen codigo_categoria_prenda NULL y con un
+        // INNER JOIN sus prendas desaparecían del detalle ("0 prendas").
+        var detalles = await (
+            from detalle in _dbContext.DetallesContratos.AsNoTracking()
+            where detalle.CodigoEmpresa == contrato.CodigoEmpresa
+                && detalle.CodigoGrupo == contrato.CodigoGrupo
+                && detalle.NumeroContrato == contrato.NumeroContrato
+            join categoria in _dbContext.CategoriasPrenda.AsNoTracking()
+                on (int?)detalle.CodigoCategoriaPrenda equals (int?)categoria.CodigoCategoriaPrenda into categorias
+            from categoria in categorias.DefaultIfEmpty()
+            orderby detalle.SecuenciaContratos
+            select new ContratoDetalleDto(
+                detalle.SecuenciaContratos,
+                detalle.Descripcion,
+                detalle.Kilates,
+                detalle.Peso,
+                detalle.CantidadProducto,
+                (int?)detalle.CodigoCategoriaPrenda ?? 0,
+                categoria != null ? categoria.NombreCategoriaPrenda : null))
             .ToListAsync(cancellationToken);
 
         return new ContratoCompletoDto(

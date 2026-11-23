@@ -287,6 +287,181 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
                     b.ToTable("UsuariosPin", (string)null);
                 });
 
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.Ticket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AsignadoA")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Asunto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("CodigoEmpresa")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime>("FechaActualizacionUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaCierreUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacionUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NumeroContrato")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Pantalla")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Prioridad")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("UltimaRespuestaDe")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("UsuarioAsignado")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodigoEmpresa", "FechaActualizacionUtc");
+
+                    b.HasIndex("Estado", "FechaActualizacionUtc");
+
+                    b.ToTable("Tickets", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketAdjunto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte[]>("Contenido")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MensajeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long>("Tamano")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MensajeId");
+
+                    b.ToTable("TicketAdjuntos", (string)null);
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketMensaje", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Autor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("EsInterno")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EsSoporte")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("TicketMensajes", (string)null);
+                });
+
             modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.CobroDocumento", b =>
                 {
                     b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", null)
@@ -305,11 +480,39 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketAdjunto", b =>
+                {
+                    b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketMensaje", null)
+                        .WithMany("Adjuntos")
+                        .HasForeignKey("MensajeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketMensaje", b =>
+                {
+                    b.HasOne("GoldmoneyBackend.Infrastructure.Persistence.Soporte.Ticket", null)
+                        .WithMany("Mensajes")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Cobros.Cobro", b =>
                 {
                     b.Navigation("Documentos");
 
                     b.Navigation("Metodos");
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.Ticket", b =>
+                {
+                    b.Navigation("Mensajes");
+                });
+
+            modelBuilder.Entity("GoldmoneyBackend.Infrastructure.Persistence.Soporte.TicketMensaje", b =>
+                {
+                    b.Navigation("Adjuntos");
                 });
 #pragma warning restore 612, 618
         }

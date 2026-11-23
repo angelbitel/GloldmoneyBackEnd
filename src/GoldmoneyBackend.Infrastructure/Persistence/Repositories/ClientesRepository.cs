@@ -1,3 +1,4 @@
+using GoldmoneyBackend.Application.Clientes;
 using GoldmoneyBackend.Application.Common.Interfaces;
 using GoldmoneyBackend.Domain.Common;
 using GoldmoneyBackend.Infrastructure.Persistence.Legacy;
@@ -8,6 +9,9 @@ namespace GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 
 public sealed class ClientesRepository : IClientesRepository
 {
+    /// <summary>Máximo de clientes que devuelve una búsqueda (el buscador muestra los primeros).</summary>
+    private const int LimiteBusqueda = 50;
+
     private readonly LegacyDataDbContext _dbContext;
 
     public ClientesRepository(LegacyDataDbContext dbContext)
@@ -19,34 +23,117 @@ public sealed class ClientesRepository : IClientesRepository
     {
         var query = _dbContext.Clientes.AsNoTracking();
 
-        if (TryNormalizePanamaId(search, out var normalizedIdCliente))
+        if (string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(x => x.IdCliente == normalizedIdCliente);
-        }
-        else if (!string.IsNullOrWhiteSpace(search))
-        {
-            var textSearch = search.Trim();
-            query = query.Where(x =>
-                (x.Nombre != null && x.Nombre.Contains(textSearch))
-                || (x.Apellido != null && x.Apellido.Contains(textSearch)));
+            return await query
+                .OrderBy(x => x.IdCliente)
+                .Select(AClienteDbDto)
+                .ToListAsync(cancellationToken);
         }
 
+        var (filtrada, cedula) = FiltrarPorBusqueda(query, search);
+        query = filtrada;
+
+        // Coincidencia exacta de cédula primero; el buscador solo necesita los primeros resultados.
         return await query
-            .OrderBy(x => x.IdCliente)
-            .Select(x => new ClienteDbDto(
-                x.IdCliente,
+            .OrderBy(x => x.IdCliente == cedula ? 0 : 1)
+            .ThenBy(x => x.Nombre)
+            .ThenBy(x => x.Apellido)
+            .Take(LimiteBusqueda)
+            .Select(AClienteDbDto)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ClientesPaginadoDto> GetPaginadoAsync(
+        string? buscar, FiltroClientes filtro, int pagina, int tamanoPagina, CancellationToken cancellationToken)
+    {
+        (pagina, tamanoPagina) = PaginacionClientes.Normalizar(pagina, tamanoPagina);
+        var clientes = _dbContext.Clientes.AsNoTracking();
+        var contratos = _dbContext.Contratos.AsNoTracking();
+
+        var (query, cedula) = FiltrarPorBusqueda(clientes, buscar);
+        query = filtro switch
+        {
+            FiltroClientes.Activos => query.Where(x => x.Estatus == 1),
+            FiltroClientes.Inactivos => query.Where(x => x.Estatus != 1),
+            FiltroClientes.ConContratos => query.Where(x => contratos.Any(c => c.IdCliente == x.IdCliente && c.SaldoCapital > 0)),
+            _ => query
+        };
+
+        var total = await query.CountAsync(cancellationToken);
+        var filas = await query
+            .OrderBy(x => x.IdCliente == cedula ? 0 : 1)
+            .ThenBy(x => x.Apellido)
+            .ThenBy(x => x.Nombre)
+            .ThenBy(x => x.IdCliente)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .Select(x => new ClienteListadoDto(
+                x.IdCliente.Trim(),
                 x.Apellido,
                 x.Nombre,
                 x.Telefono,
                 x.Estatus,
                 x.Direccion,
-                x.Comentario,
-                x.CodigoPais,
-                x.CodigoProvincia,
-                x.CodigoDistrito,
-                x.CodigoCorregimiento))
+                contratos.Count(c => c.IdCliente == x.IdCliente && c.SaldoCapital > 0),
+                contratos.Where(c => c.IdCliente == x.IdCliente && c.SaldoCapital > 0).Sum(c => c.SaldoCapital) ?? 0m))
             .ToListAsync(cancellationToken);
+
+        var totalClientes = await clientes.CountAsync(cancellationToken);
+        var activos = await clientes.CountAsync(x => x.Estatus == 1, cancellationToken);
+        var conContratos = await clientes.CountAsync(
+            x => contratos.Any(c => c.IdCliente == x.IdCliente && c.SaldoCapital > 0), cancellationToken);
+
+        return new ClientesPaginadoDto(
+            total, pagina, tamanoPagina,
+            new ResumenClientesDto(totalClientes, activos, totalClientes - activos, conContratos),
+            filas);
     }
+
+    /// <summary>
+    /// Cédula (completa, parcial o en formato normalizado), nombre, apellido o nombre completo.
+    /// Devuelve también la cédula normalizada para ordenar primero la coincidencia exacta.
+    /// </summary>
+    private static (IQueryable<ClienteDb> Query, string? Cedula) FiltrarPorBusqueda(IQueryable<ClienteDb> query, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return (query, null);
+
+        var texto = search.Trim();
+        var cedula = TryNormalizePanamaId(texto, out var normalizada) ? normalizada : texto;
+        return (query.Where(x =>
+            x.IdCliente == cedula
+            || x.IdCliente.Contains(texto)
+            || (x.Nombre != null && x.Nombre.Contains(texto))
+            || (x.Apellido != null && x.Apellido.Contains(texto))
+            || ((x.Nombre ?? "").Trim() + " " + (x.Apellido ?? "").Trim()).Contains(texto)), cedula);
+    }
+
+    public async Task<ClienteDbDto?> GetByIdAsync(string idCliente, CancellationToken cancellationToken)
+    {
+        var id = NormalizarId(idCliente);
+        return await _dbContext.Clientes
+            .AsNoTracking()
+            .Where(x => x.IdCliente == id)
+            .Select(AClienteDbDto)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private static readonly System.Linq.Expressions.Expression<Func<ClienteDb, ClienteDbDto>> AClienteDbDto = x => new ClienteDbDto(
+        x.IdCliente.Trim(),
+        x.Apellido,
+        x.Nombre,
+        x.Telefono,
+        x.Estatus,
+        x.Direccion,
+        x.Comentario,
+        x.CodigoPais,
+        x.CodigoProvincia,
+        x.CodigoDistrito,
+        x.CodigoCorregimiento);
+
+    /// <summary>Cédula panameña en formato 000-0000-00000; otros documentos (pasaporte) se respetan tal cual.</summary>
+    private static string NormalizarId(string idCliente) =>
+        TryNormalizePanamaId(idCliente, out var normalizada) ? normalizada : idCliente.Trim();
 
     private static bool TryNormalizePanamaId(string? value, out string normalizedIdCliente)
     {
@@ -90,9 +177,10 @@ public sealed class ClientesRepository : IClientesRepository
         return false;
     }
 
-    public async Task CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
+    public async Task<ClienteDbDto> CreateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
     {
-        ValidateKey(dto.IdCliente, "id_cliente");
+        ClienteDbValidacion.Validar(dto);
+        dto = dto with { IdCliente = NormalizarId(dto.IdCliente) };
 
         var exists = await _dbContext.Clientes
             .AsNoTracking()
@@ -100,7 +188,7 @@ public sealed class ClientesRepository : IClientesRepository
 
         if (exists)
         {
-            throw new ConflictDomainException("Ya existe un cliente con ese id_cliente.");
+            throw new ConflictDomainException($"Ya existe un cliente registrado con la cédula {dto.IdCliente}.");
         }
 
         var entity = new ClienteDb
@@ -128,18 +216,21 @@ public sealed class ClientesRepository : IClientesRepository
         {
             throw new DomainValidationException($"No se pudo crear el cliente en tabla CLIENTES. Detalle: {ex.InnerException?.Message ?? ex.Message}");
         }
+
+        return (await GetByIdAsync(dto.IdCliente, cancellationToken))!;
     }
 
-    public async Task UpdateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
+    public async Task<ClienteDbDto> UpdateAsync(ClienteDbUpsertDto dto, CancellationToken cancellationToken)
     {
-        ValidateKey(dto.IdCliente, "id_cliente");
+        ClienteDbValidacion.Validar(dto);
+        dto = dto with { IdCliente = NormalizarId(dto.IdCliente) };
 
         var entity = await _dbContext.Clientes
             .FirstOrDefaultAsync(x => x.IdCliente == dto.IdCliente, cancellationToken);
 
         if (entity is null)
         {
-            throw new NotFoundDomainException("Cliente no encontrado en tabla CLIENTES.");
+            throw new NotFoundDomainException($"No existe un cliente con la cédula {dto.IdCliente}.");
         }
 
         entity.Apellido = TrimOrNull(dto.Apellido);
@@ -161,6 +252,8 @@ public sealed class ClientesRepository : IClientesRepository
         {
             throw new DomainValidationException($"No se pudo actualizar el cliente en tabla CLIENTES. Detalle: {ex.InnerException?.Message ?? ex.Message}");
         }
+
+        return (await GetByIdAsync(dto.IdCliente, cancellationToken))!;
     }
 
     public async Task<bool> ActualizarComentarioAsync(string idCliente, string? comentario, CancellationToken cancellationToken)
@@ -182,11 +275,4 @@ public sealed class ClientesRepository : IClientesRepository
         return value.Trim();
     }
 
-    private static void ValidateKey(string value, string fieldName)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new DomainValidationException($"{fieldName} es obligatorio.");
-        }
-    }
 }

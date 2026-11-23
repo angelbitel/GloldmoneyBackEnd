@@ -18,9 +18,23 @@ public sealed class EmpresasController : ControllerBase
         _empresasRepository = empresasRepository;
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<EmpresaDbDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken) =>
+        Ok(await _empresasRepository.GetAllAsync(cancellationToken));
+
+    [HttpGet("{codigoEmpresa}")]
+    [ProducesResponseType(typeof(EmpresaDbDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(string codigoEmpresa, CancellationToken cancellationToken)
+    {
+        var empresa = await _empresasRepository.GetByIdAsync(codigoEmpresa, cancellationToken);
+        return empresa is null ? NotFound() : Ok(empresa);
+    }
+
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(EmpresaDbDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create([FromBody] CreateEmpresaRequest request, CancellationToken cancellationToken)
     {
         var dto = new EmpresaDbUpsertDto(
@@ -35,7 +49,8 @@ public sealed class EmpresasController : ControllerBase
             request.CodEmpresaCaja);
 
         await _empresasRepository.CreateAsync(dto, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created);
+        var creada = await _empresasRepository.GetByIdAsync(dto.CodigoEmpresa, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { codigoEmpresa = dto.CodigoEmpresa.Trim() }, creada);
     }
 
     [HttpPut("{codigoEmpresa}")]

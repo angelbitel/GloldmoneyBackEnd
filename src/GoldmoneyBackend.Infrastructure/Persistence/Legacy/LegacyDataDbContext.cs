@@ -29,6 +29,9 @@ public sealed class LegacyDataDbContext : DbContext
     public DbSet<MovimientoTemporalDb> MovimientosTemporales => Set<MovimientoTemporalDb>();
     public DbSet<SecuenciaEmpresaDb> SecuenciasEmpresa => Set<SecuenciaEmpresaDb>();
     public DbSet<PagoDb> Pagos => Set<PagoDb>();
+    public DbSet<HistorialContratoDb> HistorialContratos => Set<HistorialContratoDb>();
+    public DbSet<HDetalleContratoDb> HDetallesContratos => Set<HDetalleContratoDb>();
+    public DbSet<CopiaReciboDb> CopiasRecibo => Set<CopiaReciboDb>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -85,11 +85,16 @@ public static class DependencyInjection
         services.AddScoped<ILegacyEmpenioRepository, LegacyEmpenioRepository>();
         services.AddScoped<IEmpeniosReadService, EmpeniosReadService>();
         services.AddScoped<IPagosReadService, PagosReadService>();
+        services.AddScoped<IHistorialReadService, HistorialReadService>();
         services.AddScoped<IAbonosRepository, AbonosRepository>();
         services.AddScoped<IRetirosRepository, RetirosRepository>();
         services.AddScoped<ICobrosRepository, CobrosRepository>();
+        services.AddScoped<ITransaccionesContratoRepository, TransaccionesContratoRepository>();
+        services.AddScoped<IAdministracionReadService, AdministracionReadService>();
+        services.AddScoped<IContratosVencidosRepository, ContratosVencidosRepository>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICuentasUsuarioService, CuentasUsuarioService>();
+        services.AddScoped<ISoporteService, SoporteService>();
 
         var correoSection = configuration.GetSection(CorreoOptions.SectionName);
         services.Configure<CorreoOptions>(options =>

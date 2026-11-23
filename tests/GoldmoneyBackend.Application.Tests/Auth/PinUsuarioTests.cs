@@ -83,6 +83,8 @@ public sealed class PinUsuarioTests
         }
 
         public Task<IReadOnlyList<EstadoSesionEmpresaDto>> GetEstadoSesionesAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<SesionCerradaDto> CerrarSesionAsync(string codigoEmpresa, string usuarioCierre, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ActualizacionSaldosDto> ActualizarSaldosAsync(string codigoEmpresaCaja, bool aplicar, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class AuthFalso(string claveCorrecta) : IAuthService

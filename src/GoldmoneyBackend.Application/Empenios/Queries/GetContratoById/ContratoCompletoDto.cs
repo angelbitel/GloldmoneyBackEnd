@@ -19,4 +19,8 @@ public sealed record ContratoCompletoDto(
     string? UsuarioResponsable,
     decimal MontoMaximo,
     string? Serie,
-    IReadOnlyList<ContratoDetalleDto> Detalles);
+    IReadOnlyList<ContratoDetalleDto> Detalles)
+{
+    /// <summary>Estado administrativo (copia/anulación) calculado con las reglas de SADE.</summary>
+    public Transacciones.AdministracionContratoDto? Administracion { get; init; }
+}

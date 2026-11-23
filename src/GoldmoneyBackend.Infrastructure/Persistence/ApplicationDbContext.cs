@@ -2,6 +2,7 @@ using GoldmoneyBackend.Domain.Entities.Clientes;
 using GoldmoneyBackend.Infrastructure.Persistence.Cobros;
 using GoldmoneyBackend.Infrastructure.Persistence.Configurations;
 using GoldmoneyBackend.Infrastructure.Persistence.Cuentas;
+using GoldmoneyBackend.Infrastructure.Persistence.Soporte;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoldmoneyBackend.Infrastructure.Persistence;
@@ -20,6 +21,9 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<RestablecimientoContrasena> RestablecimientosContrasena => Set<RestablecimientoContrasena>();
     public DbSet<Cobro> Cobros => Set<Cobro>();
     public DbSet<CobroDocumento> CobrosDocumento => Set<CobroDocumento>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketMensaje> TicketMensajes => Set<TicketMensaje>();
+    public DbSet<TicketAdjunto> TicketAdjuntos => Set<TicketAdjunto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

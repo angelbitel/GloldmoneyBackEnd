@@ -15,6 +15,27 @@ public sealed class EmpresasRepository : IEmpresasRepository
         _dbContext = dbContext;
     }
 
+    public async Task<IReadOnlyList<EmpresaDbDto>> GetAllAsync(CancellationToken cancellationToken) =>
+        await _dbContext.Empresas
+            .AsNoTracking()
+            .OrderBy(x => x.CodigoEmpresa)
+            .Select(x => new EmpresaDbDto(
+                x.CodigoEmpresa.Trim(), x.NombreEmpresa, x.Direccion, x.Ruc, x.Telefono,
+                x.MontoInicial, x.MontoAuxiliar, x.ManejoCajaDep, x.CodEmpresaCaja))
+            .ToListAsync(cancellationToken);
+
+    public async Task<EmpresaDbDto?> GetByIdAsync(string codigoEmpresa, CancellationToken cancellationToken)
+    {
+        var codigo = codigoEmpresa.Trim();
+        return await _dbContext.Empresas
+            .AsNoTracking()
+            .Where(x => x.CodigoEmpresa == codigo)
+            .Select(x => new EmpresaDbDto(
+                x.CodigoEmpresa.Trim(), x.NombreEmpresa, x.Direccion, x.Ruc, x.Telefono,
+                x.MontoInicial, x.MontoAuxiliar, x.ManejoCajaDep, x.CodEmpresaCaja))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task CreateAsync(EmpresaDbUpsertDto dto, CancellationToken cancellationToken)
     {
         ValidateKey(dto.CodigoEmpresa, "codigo_empresa");
