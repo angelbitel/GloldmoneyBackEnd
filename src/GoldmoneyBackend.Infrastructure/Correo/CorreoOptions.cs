@@ -17,6 +17,9 @@ public sealed class CorreoOptions
     /// <summary>Clave de la API de Resend (re_...). Si tiene valor se envía por Resend en lugar de SMTP.</summary>
     public string ResendApiKey { get; set; } = string.Empty;
 
+    /// <summary>Clave de la API de Brevo (xkeysib-...). Tiene prioridad sobre Resend y SMTP.</summary>
+    public string BrevoApiKey { get; set; } = string.Empty;
+
     /// <summary>URL del frontend donde está la pantalla /restablecer-contrasena.</summary>
     public string FrontendBaseUrl { get; set; } = "http://localhost:5173";
 

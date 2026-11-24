@@ -108,14 +108,23 @@ public static class DependencyInjection
             options.From = correoSection["From"] ?? string.Empty;
             options.FromName = correoSection["FromName"] ?? "GoldMoney";
             options.ResendApiKey = correoSection["ResendApiKey"] ?? string.Empty;
+            options.BrevoApiKey = correoSection["BrevoApiKey"] ?? string.Empty;
             options.FrontendBaseUrl = correoSection["FrontendBaseUrl"] ?? "http://localhost:5173";
             options.RegistrarEnlaceEnLog = bool.TryParse(correoSection["RegistrarEnlaceEnLog"], out var registrar) && registrar;
         });
-        // Con clave de Resend se envía por su API (HTTPS); si no, por SMTP.
+        // Proveedor según la clave configurada: Brevo, luego Resend (ambos por HTTPS); si no hay, SMTP.
         services.AddScoped<INotificadorCuentas>(sp =>
-            string.IsNullOrWhiteSpace(sp.GetRequiredService<IOptions<CorreoOptions>>().Value.ResendApiKey)
+        {
+            var correo = sp.GetRequiredService<IOptions<CorreoOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(correo.BrevoApiKey))
+            {
+                return ActivatorUtilities.CreateInstance<BrevoNotificadorCuentas>(sp);
+            }
+
+            return string.IsNullOrWhiteSpace(correo.ResendApiKey)
                 ? ActivatorUtilities.CreateInstance<SmtpNotificadorCuentas>(sp)
-                : ActivatorUtilities.CreateInstance<ResendNotificadorCuentas>(sp));
+                : ActivatorUtilities.CreateInstance<ResendNotificadorCuentas>(sp);
+        });
 
         return services;
     }
