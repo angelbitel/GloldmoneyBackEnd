@@ -8,6 +8,7 @@ using GoldmoneyBackend.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace GoldmoneyBackend.Infrastructure;
 
@@ -106,10 +107,15 @@ public static class DependencyInjection
             options.Password = correoSection["Password"] ?? string.Empty;
             options.From = correoSection["From"] ?? string.Empty;
             options.FromName = correoSection["FromName"] ?? "GoldMoney";
+            options.BrevoApiKey = correoSection["BrevoApiKey"] ?? string.Empty;
             options.FrontendBaseUrl = correoSection["FrontendBaseUrl"] ?? "http://localhost:5173";
             options.RegistrarEnlaceEnLog = bool.TryParse(correoSection["RegistrarEnlaceEnLog"], out var registrar) && registrar;
         });
-        services.AddScoped<INotificadorCuentas, SmtpNotificadorCuentas>();
+        // Con clave de Brevo se envía por su API (HTTPS); si no, por SMTP.
+        services.AddScoped<INotificadorCuentas>(sp =>
+            string.IsNullOrWhiteSpace(sp.GetRequiredService<IOptions<CorreoOptions>>().Value.BrevoApiKey)
+                ? ActivatorUtilities.CreateInstance<SmtpNotificadorCuentas>(sp)
+                : ActivatorUtilities.CreateInstance<BrevoNotificadorCuentas>(sp));
 
         return services;
     }
