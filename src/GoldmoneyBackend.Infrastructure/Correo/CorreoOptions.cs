@@ -14,8 +14,8 @@ public sealed class CorreoOptions
     public string From { get; set; } = string.Empty;
     public string FromName { get; set; } = "GoldMoney";
 
-    /// <summary>Clave de la API de Brevo. Si tiene valor se envía por Brevo en lugar de SMTP.</summary>
-    public string BrevoApiKey { get; set; } = string.Empty;
+    /// <summary>Clave de la API de Resend (re_...). Si tiene valor se envía por Resend en lugar de SMTP.</summary>
+    public string ResendApiKey { get; set; } = string.Empty;
 
     /// <summary>URL del frontend donde está la pantalla /restablecer-contrasena.</summary>
     public string FrontendBaseUrl { get; set; } = "http://localhost:5173";
